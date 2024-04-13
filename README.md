@@ -1,6 +1,7 @@
-# uilive [![GoDoc](https://godoc.org/github.com/gosuri/uilive?status.svg)](https://godoc.org/github.com/gosuri/uilive) [![Build Status](https://travis-ci.org/gosuri/uilive.svg?branch=master)](https://travis-ci.org/gosuri/uilive)
+# termlive
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/termlive)](https://pkg.go.dev/github.com/hekmon/termlive)
 
-uilive is a go library for updating terminal output in realtime. It provides a buffered [io.Writer](https://golang.org/pkg/io/#Writer) that is flushed at a timed interval. uilive powers [uiprogress](https://github.com/gosuri/uiprogress).
+uilive is a go library for updating terminal output in realtime. It provides a buffered [io.Writer](https://golang.org/pkg/io/#Writer) that is flushed at a timed interval.
 
 ## Usage Example
 
@@ -27,5 +28,5 @@ The above will render
 ## Installation
 
 ```sh
-$ go get -v github.com/gosuri/uilive
+$ go get -v github.com/hekmon/termlive
 ```

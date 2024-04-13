@@ -1,6 +1,6 @@
-// +build windows
+//go:build windows
 
-package uilive
+package termlive
 
 import (
 	"os"

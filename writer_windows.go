@@ -1,12 +1,13 @@
-// +build windows
+//go:build windows
 
-package uilive
+package termlive
 
 import (
 	"fmt"
 	"strings"
 	"syscall"
 	"unsafe"
+
 	"github.com/mattn/go-isatty"
 )
 

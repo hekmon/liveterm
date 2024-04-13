@@ -1,4 +1,4 @@
-package uilive
+package termlive
 
 import (
 	"bytes"
