@@ -8,7 +8,7 @@ import (
 )
 
 // clear the line and move the cursor up
-var clear = fmt.Sprintf("%c[%dA%c[2K", ESC, 1, ESC)
+var clear = fmt.Sprintf("%c[%dA%c[2K", esc, 1, esc)
 
 func clearLines() {
 	_, _ = fmt.Fprint(out, strings.Repeat(clear, lineCount))

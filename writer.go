@@ -9,7 +9,7 @@ import (
 )
 
 // ESC is the ASCII code for escape character
-const ESC = 27
+const esc = 27
 
 var (
 	// Config

@@ -21,7 +21,7 @@ var (
 )
 
 // clear the line and move the cursor up
-var clear = fmt.Sprintf("%c[%dA%c[2K\r", ESC, 0, ESC)
+var clear = fmt.Sprintf("%c[%dA%c[2K\r", esc, 0, esc)
 
 type short int16
 type dword uint32
