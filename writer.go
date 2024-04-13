@@ -36,6 +36,11 @@ func init() {
 	}
 }
 
+// GetTermWidth returns the current terminal width
+func GetTermWidth() int {
+	return termWidth
+}
+
 // SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
 // There is no need to end each line with a '\n' as it will be added automatically.
 func SetMultiLinesUpdateFx(fx func() []string) {
