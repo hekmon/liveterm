@@ -1,6 +1,6 @@
 module github.com/hekmon/termlive
 
-go 1.22
+go 1.18
 
 require github.com/mattn/go-isatty v0.0.20
 
