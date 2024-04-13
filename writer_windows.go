@@ -4,6 +4,7 @@ package termlive
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -46,20 +47,26 @@ type consoleScreenBufferInfo struct {
 	maximumWindowSize coord
 }
 
-func (w *Writer) clearLines() {
-	f, ok := w.Out.(FdWriter)
+// fdWriter is a writer with a file descriptor.
+type fdWriter interface {
+	io.Writer
+	Fd() uintptr
+}
+
+func clearLines() {
+	f, ok := out.(fdWriter)
 	if ok && !isatty.IsTerminal(f.Fd()) {
 		ok = false
 	}
 	if !ok {
-		_, _ = fmt.Fprint(w.Out, strings.Repeat(clear, w.lineCount))
+		_, _ = fmt.Fprint(out, strings.Repeat(clear, lineCount))
 		return
 	}
 	fd := f.Fd()
 	var csbi consoleScreenBufferInfo
 	_, _, _ = procGetConsoleScreenBufferInfo.Call(fd, uintptr(unsafe.Pointer(&csbi)))
 
-	for i := 0; i < w.lineCount; i++ {
+	for i := 0; i < lineCount; i++ {
 		// move the cursor up
 		csbi.cursorPosition.y--
 		_, _, _ = procSetConsoleCursorPosition.Call(fd, uintptr(*(*int32)(unsafe.Pointer(&csbi.cursorPosition))))

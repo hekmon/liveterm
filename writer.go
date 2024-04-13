@@ -2,7 +2,6 @@ package termlive
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"os"
 	"sync"
@@ -12,162 +11,133 @@ import (
 // ESC is the ASCII code for escape character
 const ESC = 27
 
-// RefreshInterval is the default refresh interval to update the ui
-var RefreshInterval = time.Millisecond
+var (
+	// Config
+	RefreshInterval = 100 * time.Millisecond // RefreshInterval is the default refresh interval to update the ui
+	Out             = os.Stdout              // Out is the default output writer used by Start()
+	// Internal
+	termWidth       int
+	overFlowHandled bool
+	out             io.Writer
+	getData         func() []byte
+	ticker          *time.Ticker
+	tdone           chan bool
+	state           []byte
+	mtx             sync.Mutex
+	lineCount       int
+)
 
-var overFlowHandled bool
-
-var termWidth int
-
-// Out is the default output writer for the Writer
-var Out = io.Writer(os.Stdout)
-
-// ErrClosedPipe is the error returned when trying to writer is not listening
-var ErrClosedPipe = errors.New("uilive: read/write on closed pipe")
-
-// FdWriter is a writer with a file descriptor.
-type FdWriter interface {
-	io.Writer
-	Fd() uintptr
-}
-
-// Writer is a buffered the writer that updates the terminal. The contents of writer will be flushed on a timed interval or when Flush is called.
-type Writer struct {
-	// Out is the writer to write to
-	Out io.Writer
-
-	// RefreshInterval is the time the UI sould refresh
-	RefreshInterval time.Duration
-
-	ticker *time.Ticker
-	tdone  chan bool
-
-	buf       bytes.Buffer
-	mtx       *sync.Mutex
-	lineCount int
-}
-
-type bypass struct {
-	writer *Writer
-}
-
-type newline struct {
-	writer *Writer
-}
-
-// New returns a new Writer with defaults
-func New() *Writer {
+func init() {
 	termWidth, _ = getTermSize()
 	if termWidth != 0 {
 		overFlowHandled = true
 	}
-
-	return &Writer{
-		Out:             Out,
-		RefreshInterval: RefreshInterval,
-
-		mtx: &sync.Mutex{},
-	}
 }
 
-// Flush writes to the out and resets the buffer. It should be called after the last call to Write to ensure that any data buffered in the Writer is written to output.
-// Any incomplete escape sequence at the end is considered complete for formatting purposes.
-// An error is returned if the contents of the buffer cannot be written to the underlying output stream
-func (w *Writer) Flush() error {
-	w.mtx.Lock()
-	defer w.mtx.Unlock()
-
-	// do nothing if buffer is empty
-	if len(w.buf.Bytes()) == 0 {
-		return nil
-	}
-	w.clearLines()
-
-	lines := 0
-	var currentLine bytes.Buffer
-	for _, b := range w.buf.Bytes() {
-		if b == '\n' {
-			lines++
-			currentLine.Reset()
-		} else {
-			currentLine.Write([]byte{b})
-			if overFlowHandled && currentLine.Len() > termWidth {
-				lines++
-				currentLine.Reset()
-			}
-		}
-	}
-	w.lineCount = lines
-	_, err := w.Out.Write(w.buf.Bytes())
-	w.buf.Reset()
-	return err
+func SetUpdateFx(fx func() []byte) {
+	mtx.Lock()
+	getData = fx
+	mtx.Unlock()
 }
 
-// Start starts the listener in a non-blocking manner
-func (w *Writer) Start() {
-	if w.ticker == nil {
-		w.ticker = time.NewTicker(w.RefreshInterval)
-		w.tdone = make(chan bool)
+// Start starts the updater in a non-blocking manner
+func Start() {
+	defer mtx.Unlock()
+	mtx.Lock()
+	// Nullify multiples calls to start
+	if ticker != nil {
+		return
 	}
-
-	go w.Listen()
+	// Start the updater
+	out = Out
+	ticker = time.NewTicker(RefreshInterval)
+	tdone = make(chan bool)
+	go worker()
 }
 
-// Stop stops the listener that updates the terminal
-func (w *Writer) Stop() {
-	w.Flush()
-	w.tdone <- true
-	<-w.tdone
+// Stop stops the updater that updates the terminal
+func Stop() {
+	tdone <- true
+	<-tdone
 }
 
-// Listen listens for updates to the writer's buffer and flushes to the out provided. It blocks the runtime.
-func (w *Writer) Listen() {
+func worker() {
 	for {
 		select {
-		case <-w.ticker.C:
-			if w.ticker != nil {
-				_ = w.Flush()
+		case <-ticker.C:
+			mtx.Lock()
+			if ticker == nil {
+				continue
 			}
-		case <-w.tdone:
-			w.mtx.Lock()
-			w.ticker.Stop()
-			w.ticker = nil
-			w.mtx.Unlock()
-			close(w.tdone)
+			update()
+			mtx.Unlock()
+		case <-tdone:
+			mtx.Lock()
+			ticker.Stop()
+			ticker = nil
+			update() // update the data one last time
+			close(tdone)
+			mtx.Unlock()
 			return
 		}
 	}
 }
 
-// Write save the contents of buf to the writer b. The only errors returned are ones encountered while writing to the underlying buffer.
-func (w *Writer) Write(buf []byte) (n int, err error) {
-	w.mtx.Lock()
-	defer w.mtx.Unlock()
-	return w.buf.Write(buf)
+// update is unsafe ! It must be called within a mutex lock by its parent
+func update() {
+	if getData == nil {
+		return
+	}
+	data := getData()
+	// take ownership of the data
+	state = make([]byte, len(data))
+	copy(state, data)
+	// update terminal
+	flush()
 }
 
-// Bypass creates an io.Writer which allows non-buffered output to be written to the underlying output
-func (w *Writer) Bypass() io.Writer {
-	return &bypass{writer: w}
+// flush is unsafe ! It must be called within a mutex lock by its parent
+func flush() {
+	// do nothing if buffer is empty
+	if len(state) == 0 {
+		return
+	}
+	// Reset the cursor
+	clearLines()
+	lineCount = 0
+	// Count the number of lines we are about to write for futur clearLines() calls
+	var currentLine bytes.Buffer
+	for _, b := range state {
+		if b == '\n' {
+			lineCount++
+			currentLine.Reset()
+		} else if overFlowHandled {
+			currentLine.Write([]byte{b})
+			if currentLine.Len() > termWidth {
+				lineCount++
+				currentLine.Reset()
+			}
+		}
+	}
+	// Write the current state
+	out.Write(state)
+	return
 }
 
-func (b *bypass) Write(p []byte) (int, error) {
-	b.writer.mtx.Lock()
-	defer b.writer.mtx.Unlock()
-
-	b.writer.clearLines()
-	b.writer.lineCount = 0
-	return b.writer.Out.Write(p)
+// Bypass creates an io.Writer which allows to write a permalent lines to the terminal. Do not forget to include a final '\n' when writting to it.
+func Bypass() io.Writer {
+	return &bypass{}
 }
 
-// Newline creates an io.Writer which allows buffered output to be written to the underlying output. This enable writing
-// to multiple lines at once.
-func (w *Writer) Newline() io.Writer {
-	return &newline{writer: w}
-}
+type bypass struct{}
 
-func (n *newline) Write(p []byte) (int, error) {
-	n.writer.mtx.Lock()
-	defer n.writer.mtx.Unlock()
-	return n.writer.buf.Write(p)
+// Each write will retrigger the update of the previous dynamic data even if out of tick.
+func (bypass) Write(p []byte) (n int, err error) {
+	mtx.Lock()
+	defer mtx.Unlock()
+	clearLines()
+	lineCount = 0
+	n, err = out.Write(p)
+	flush()
+	return
 }
