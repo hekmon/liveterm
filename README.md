@@ -20,11 +20,10 @@ This can cause performance issue when your data change very frequently:
 
 ### termlive
 
-With `termlive` I wanted a more efficient, pull based approach:
+With `termlive` I wanted a more efficient, sync pull based approach:
 * You register a function that returns the data you want to be (re)printed
 * At each tick, `termlive` will call that function to get up to date data before printing it
 * Between each tick, `termlive` sleeps and no buffer or mutex are used for nothing
-
 
 ## Usage Example
 
@@ -42,6 +41,8 @@ termlive.SetSingleLineUpdateFx(getStatsFx)
 // Start live printing
 termlive.Start()
 
+// [ ... ]
+
 // Let's write something to stdout while termlive is running
 fmt.Fprintf(termlive.Bypass(), "This is a message that will be displayed on stdout while the counter is running\n")
 
@@ -50,6 +51,8 @@ fmt.Fprintf(termlive.Bypass(), "This is a message that will be displayed on stdo
 // Release stdout
 termlive.Stop(false)
 ```
+
+![Example output](example/example.gif)
 
 ## Installation
 
