@@ -86,10 +86,10 @@ func Start() {
 	go worker()
 }
 
-// Stop stops the updater that updates the terminal.
+// Stop stops the updater that updates the terminal. Clear will erase dynamic data from the terminal before stopping.
 // Choosen output (stdout or stderr) can be used again directly after this call.
-func Stop() {
-	tdone <- true
+func Stop(clear bool) {
+	tdone <- clear
 	<-tdone
 }
 
@@ -101,17 +101,22 @@ func ForceUpdate() {
 }
 
 func worker() {
+	var clear bool
 	for {
 		select {
 		case <-ticker.C:
 			mtx.Lock()
 			update()
 			mtx.Unlock()
-		case <-tdone:
+		case clear = <-tdone:
 			mtx.Lock()
 			ticker.Stop()
 			ticker = nil
-			update() // update the data one last time
+			if clear {
+				erase()
+			} else {
+				update() // update ui one last time with latest possible data
+			}
 			out = nil
 			close(tdone)
 			mtx.Unlock()
