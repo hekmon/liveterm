@@ -32,8 +32,11 @@ func init() {
 	if termWidth != 0 {
 		overFlowHandled = true
 	}
+	// In case ForceUpdate() is called without Start()
+	out = Out
 }
 
+// SetUpdater sets the function that returns the data to be displayed in the terminal
 func SetUpdateFx(fx func() []byte) {
 	mtx.Lock()
 	getData = fx
@@ -42,10 +45,10 @@ func SetUpdateFx(fx func() []byte) {
 
 // Start starts the updater in a non-blocking manner
 func Start() {
-	defer mtx.Unlock()
 	mtx.Lock()
 	// Nullify multiples calls to start
 	if ticker != nil {
+		mtx.Unlock()
 		return
 	}
 	// Start the updater
@@ -53,6 +56,7 @@ func Start() {
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
 	go worker()
+	mtx.Unlock()
 }
 
 // Stop stops the updater that updates the terminal
@@ -61,12 +65,20 @@ func Stop() {
 	<-tdone
 }
 
+// ForceUpdate forces an update of the terminal even if out of tick
+func ForceUpdate() {
+	mtx.Lock()
+	update()
+	mtx.Unlock()
+}
+
 func worker() {
 	for {
 		select {
 		case <-ticker.C:
 			mtx.Lock()
 			if ticker == nil {
+				mtx.Unlock()
 				continue
 			}
 			update()
@@ -92,19 +104,23 @@ func update() {
 	// take ownership of the data
 	state = make([]byte, len(data))
 	copy(state, data)
-	// update terminal
-	flush()
+	// update terms
+	erase()
+	_, _ = write()
 }
 
-// flush is unsafe ! It must be called within a mutex lock by its parent
-func flush() {
+// erase is unsafe ! It must be called within a mutex lock by its parent
+func erase() {
+	clearLines()
+	lineCount = 0
+}
+
+// write is unsafe ! It must be called within a mutex lock by its parent
+func write() (n int, err error) {
 	// do nothing if buffer is empty
 	if len(state) == 0 {
 		return
 	}
-	// Reset the cursor
-	clearLines()
-	lineCount = 0
 	// Count the number of lines we are about to write for futur clearLines() calls
 	var currentLine bytes.Buffer
 	for _, b := range state {
@@ -120,8 +136,7 @@ func flush() {
 		}
 	}
 	// Write the current state
-	out.Write(state)
-	return
+	return out.Write(state)
 }
 
 // Bypass creates an io.Writer which allows to write a permalent lines to the terminal. Do not forget to include a final '\n' when writting to it.
@@ -133,11 +148,15 @@ type bypass struct{}
 
 // Each write will retrigger the update of the previous dynamic data even if out of tick.
 func (bypass) Write(p []byte) (n int, err error) {
-	mtx.Lock()
 	defer mtx.Unlock()
-	clearLines()
-	lineCount = 0
-	n, err = out.Write(p)
-	flush()
+	mtx.Lock()
+	// erase current dynamic data
+	erase()
+	// write permanent data
+	if n, err = out.Write(p); err != nil {
+		return
+	}
+	// rewrite dynamic data after it
+	_, err = write()
 	return
 }
