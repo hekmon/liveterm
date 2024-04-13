@@ -111,12 +111,12 @@ func worker() {
 		case clear = <-tdone:
 			mtx.Lock()
 			ticker.Stop()
-			ticker = nil
 			if clear {
 				erase()
 			} else {
 				update() // update ui one last time with latest possible data
 			}
+			ticker = nil
 			out = nil
 			close(tdone)
 			mtx.Unlock()
@@ -132,15 +132,16 @@ func update() {
 	}
 	// Rebuild buffer with current data
 	buf.Reset()
-	if getterLines != nil {
+	switch {
+	case getterLines != nil:
 		for _, line := range getterLines() {
 			buf.WriteString(line)
 			buf.WriteByte('\n')
 		}
-	} else if getterLine != nil {
+	case getterLine != nil:
 		buf.WriteString(getterLine())
 		buf.WriteByte('\n')
-	} else {
+	case getterRaw != nil:
 		buf.Write(getterRaw())
 	}
 	// Update terminal with it
