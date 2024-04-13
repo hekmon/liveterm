@@ -1,29 +1,55 @@
 # termlive
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/termlive)](https://pkg.go.dev/github.com/hekmon/termlive)
 
-uilive is a go library for updating terminal output in realtime. It provides a buffered [io.Writer](https://golang.org/pkg/io/#Writer) that is flushed at a timed interval.
+`termlive` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](github.com/gosuri/uilive).
+
+## Fork difference
+
+### uilive
+
+`uilive` works with an async push based approach:
+* You write (aka "push") to an buffer within `uilive` writer
+* Writing to this buffer triggers a mutex lock/unlock
+* When ticks kick in, `uilive` read its internal buffer and update the terminal with it
+
+This can cause performance issue when your data change very frequently:
+* Let's say you update the buffer 1,000,000 times per second
+* But your ui update frequency is 100 milliseconds
+* Between each ui update, the internal buffer is modified 100,000 times, 99,999 for nothing
+* This is wasted ressources and can cause slowdown because of the mutex constant locking/unlocking
+
+### termlive
+
+With `termlive` I wanted a more efficient, pull based approach:
+* You register a function that returns the data you want to be (re)printed
+* At each tick, `termlive` will call that function to get up to date data before printing it
+* Between each tick, `termlive` sleeps and no buffer or mutex are used for nothing
+
 
 ## Usage Example
 
-Calling `uilive.New()` will create a new writer. To start rendering, simply call `writer.Start()` and update the ui by writing to the `writer`. Full source for the below example is in [example/main.go](example/main.go).
+Full source for the below example is in [example/main.go](example/main.go).
 
 ```go
-writer := uilive.New()
-// start listening for updates and render
-writer.Start()
+// Change default configuration if needed
+termlive.RefreshInterval = 100 * time.Millisecond
+termlive.UseStdErr = false
 
-for i := 0; i <= 100; i++ {
-  fmt.Fprintf(writer, "Downloading.. (%d/%d) GB\n", i, 100)
-  time.Sleep(time.Millisecond * 5)
-}
+// Set the function that will return the data to be displayed
+// This can be done or changed even after Start() has been called
+termlive.SetSingleLineUpdateFx(getStatsFx)
 
-fmt.Fprintln(writer, "Finished: Downloaded 100GB")
-writer.Stop() // flush and stop rendering
+// Start live printing
+termlive.Start()
+
+// Let's write something to stdout while termlive is running
+fmt.Fprintf(termlive.Bypass(), "This is a message that will be displayed on stdout while the counter is running\n")
+
+// [ ... ]
+
+// Release stdout
+termlive.Stop(false)
 ```
-
-The above will render
-
-![example](doc/example.gif)
 
 ## Installation
 
