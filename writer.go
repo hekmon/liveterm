@@ -14,15 +14,15 @@ const ESC = 27
 var (
 	// Config
 	RefreshInterval = 100 * time.Millisecond // RefreshInterval is the default refresh interval to update the ui
-	Out             = os.Stdout              // Out is the default output writer used by Start()
+	UseStdErr       = false                  // use StdErr instead of StdOut
 	// Internal
 	termWidth       int
 	overFlowHandled bool
 	out             io.Writer
-	getData         func() []byte
 	ticker          *time.Ticker
 	tdone           chan bool
-	state           []byte
+	getter          func() []string
+	buf             bytes.Buffer
 	mtx             sync.Mutex
 	lineCount       int
 )
@@ -32,31 +32,41 @@ func init() {
 	if termWidth != 0 {
 		overFlowHandled = true
 	}
-	// In case ForceUpdate() is called without Start()
-	out = Out
 }
 
-// SetUpdater sets the function that returns the data to be displayed in the terminal
-func SetUpdateFx(fx func() []byte) {
+// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal
+func SetMultiLinesDataFx(fx func() []string) {
 	mtx.Lock()
-	getData = fx
+	getter = fx
+	mtx.Unlock()
+}
+
+// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal
+func SetSingleLineDataFx(fx func() string) {
+	mtx.Lock()
+	getter = func() []string {
+		return []string{fx()}
+	}
 	mtx.Unlock()
 }
 
 // Start starts the updater in a non-blocking manner
 func Start() {
+	defer mtx.Unlock()
 	mtx.Lock()
 	// Nullify multiples calls to start
 	if ticker != nil {
-		mtx.Unlock()
 		return
 	}
 	// Start the updater
-	out = Out
+	if UseStdErr {
+		out = os.Stderr
+	} else {
+		out = os.Stdout
+	}
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
 	go worker()
-	mtx.Unlock()
 }
 
 // Stop stops the updater that updates the terminal
@@ -77,10 +87,6 @@ func worker() {
 		select {
 		case <-ticker.C:
 			mtx.Lock()
-			if ticker == nil {
-				mtx.Unlock()
-				continue
-			}
 			update()
 			mtx.Unlock()
 		case <-tdone:
@@ -95,35 +101,35 @@ func worker() {
 	}
 }
 
-// update is unsafe ! It must be called within a mutex lock by its parent
+// update is unsafe ! It must be called within a mutex lock by one of its callers
 func update() {
-	if getData == nil {
+	if getter == nil || out == nil {
 		return
 	}
-	data := getData()
-	// take ownership of the data
-	state = make([]byte, len(data))
-	copy(state, data)
-	// update terms
+	buf.Reset()
+	for _, line := range getter() {
+		buf.WriteString(line)
+		buf.WriteByte('\n')
+	}
 	erase()
 	_, _ = write()
 }
 
-// erase is unsafe ! It must be called within a mutex lock by its parent
+// erase is unsafe ! It must be called within a mutex lock by one of its callers
 func erase() {
 	clearLines()
 	lineCount = 0
 }
 
-// write is unsafe ! It must be called within a mutex lock by its parent
+// write is unsafe ! It must be called within a mutex lock by one of its callers
 func write() (n int, err error) {
 	// do nothing if buffer is empty
-	if len(state) == 0 {
+	if buf.Len() == 0 {
 		return
 	}
-	// Count the number of lines we are about to write for futur clearLines() calls
+	// Count the number of actual term lines we are about to write for futur clearLines() calls
 	var currentLine bytes.Buffer
-	for _, b := range state {
+	for _, b := range buf.Bytes() {
 		if b == '\n' {
 			lineCount++
 			currentLine.Reset()
@@ -136,7 +142,7 @@ func write() (n int, err error) {
 		}
 	}
 	// Write the current state
-	return out.Write(state)
+	return out.Write(buf.Bytes())
 }
 
 // Bypass creates an io.Writer which allows to write a permalent lines to the terminal. Do not forget to include a final '\n' when writting to it.
