@@ -21,7 +21,9 @@ var (
 	out             io.Writer
 	ticker          *time.Ticker
 	tdone           chan bool
-	getter          func() []string
+	getterLines     func() []string
+	getterLine      func() string
+	getterRaw       func() []byte
 	buf             bytes.Buffer
 	mtx             sync.Mutex
 	lineCount       int
@@ -34,23 +36,38 @@ func init() {
 	}
 }
 
-// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal
-func SetMultiLinesDataFx(fx func() []string) {
+// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
+// There is no need to end each line with a '\n' as it will be added automatically.
+func SetMultiLinesUpdateFx(fx func() []string) {
 	mtx.Lock()
-	getter = fx
+	getterLines = fx
+	getterLine = nil
+	getterRaw = nil
 	mtx.Unlock()
 }
 
-// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal
-func SetSingleLineDataFx(fx func() string) {
+// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
+// There is no need to end each line with a '\n' as it will be added automatically.
+func SetSingleLineUpdateFx(fx func() string) {
 	mtx.Lock()
-	getter = func() []string {
-		return []string{fx()}
-	}
+	getterLines = nil
+	getterLine = fx
+	getterRaw = nil
 	mtx.Unlock()
 }
 
-// Start starts the updater in a non-blocking manner
+// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
+// You are responsible for adding the trailing '\n' at the end.
+func SetRawUpdateFx(fx func() []byte) {
+	mtx.Lock()
+	getterLines = nil
+	getterLine = nil
+	getterRaw = fx
+	mtx.Unlock()
+}
+
+// Start starts the updater in a non-blocking manner.
+// After calling Start(), the output (stdout or stderr) should not be used directly anymore.
 func Start() {
 	defer mtx.Unlock()
 	mtx.Lock()
@@ -69,7 +86,8 @@ func Start() {
 	go worker()
 }
 
-// Stop stops the updater that updates the terminal
+// Stop stops the updater that updates the terminal.
+// Choosen output (stdout or stderr) can be used again directly after this call.
 func Stop() {
 	tdone <- true
 	<-tdone
@@ -94,6 +112,7 @@ func worker() {
 			ticker.Stop()
 			ticker = nil
 			update() // update the data one last time
+			out = nil
 			close(tdone)
 			mtx.Unlock()
 			return
@@ -103,14 +122,23 @@ func worker() {
 
 // update is unsafe ! It must be called within a mutex lock by one of its callers
 func update() {
-	if getter == nil || out == nil {
+	if (getterLines == nil && getterLine == nil && getterRaw == nil) || out == nil {
 		return
 	}
+	// Rebuild buffer with current data
 	buf.Reset()
-	for _, line := range getter() {
-		buf.WriteString(line)
+	if getterLines != nil {
+		for _, line := range getterLines() {
+			buf.WriteString(line)
+			buf.WriteByte('\n')
+		}
+	} else if getterLine != nil {
+		buf.WriteString(getterLine())
 		buf.WriteByte('\n')
+	} else {
+		buf.Write(getterRaw())
 	}
+	// Update terminal with it
 	erase()
 	_, _ = write()
 }
@@ -123,11 +151,7 @@ func erase() {
 
 // write is unsafe ! It must be called within a mutex lock by one of its callers
 func write() (n int, err error) {
-	// do nothing if buffer is empty
-	if buf.Len() == 0 {
-		return
-	}
-	// Count the number of actual term lines we are about to write for futur clearLines() calls
+	// Count the number of actual term lines we are about to write for futur clearLines() call
 	var currentLine bytes.Buffer
 	for _, b := range buf.Bytes() {
 		if b == '\n' {
