@@ -1,7 +1,7 @@
 # termlive
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/termlive)](https://pkg.go.dev/github.com/hekmon/termlive)
 
-`termlive` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](github.com/gosuri/uilive).
+`termlive` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](https://github.com/gosuri/uilive).
 
 ## Fork difference
 
