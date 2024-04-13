@@ -25,8 +25,8 @@ var (
 	getterLine      func() string
 	getterRaw       func() []byte
 	buf             bytes.Buffer
-	mtx             sync.Mutex
 	lineCount       int
+	mtx             sync.Mutex
 )
 
 func init() {
@@ -121,8 +121,13 @@ func worker() {
 			} else {
 				update() // update ui one last time with latest possible data
 			}
-			ticker = nil
 			out = nil
+			ticker = nil
+			getterLines = nil
+			getterLine = nil
+			getterRaw = nil
+			buf.Reset()
+			lineCount = 0
 			close(tdone)
 			mtx.Unlock()
 			return
