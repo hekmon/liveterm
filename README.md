@@ -18,6 +18,8 @@ This can cause performance issue when your data change very frequently:
 * Between each ui update, the internal buffer is modified 100,000 times, 99,999 for nothing
 * This is wasted ressources and can cause slowdown because of the mutex constant locking/unlocking
 
+You could throttle you data update with your own ticker but you will end up with 2 tickers on both side, not in sync. Why not use only one ?
+
 ### termlive
 
 With `termlive` I wanted a more efficient, sync pull based approach:
