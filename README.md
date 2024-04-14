@@ -4,7 +4,7 @@
 `termlive` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](https://github.com/gosuri/uilive).
 
 It changes its update model from push to pull and add features such as:
-* Helpers to get up to date terminal size to help user formats its data each
+* Helpers to get up to date terminal size to help user formats its data
     * Size is automatically updated if terminal is resized, simply call the helper at the beginning of your formating fx
 * Support for incomplete lines
     * User can push raw bytes even if not ended by `\n` (cursor will stay at the end of the line)
