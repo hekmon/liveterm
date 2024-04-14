@@ -2,6 +2,7 @@ package termlive
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -204,6 +205,11 @@ type bypass struct{}
 func (bypass) Write(p []byte) (n int, err error) {
 	defer mtx.Unlock()
 	mtx.Lock()
+	// if termlive is not started, out is nil
+	if out == nil {
+		err = fmt.Errorf("termlive is not started, can not write to terminal")
+		return
+	}
 	// erase current dynamic data
 	erase()
 	// write permanent data
