@@ -59,6 +59,7 @@ func clearLines() {
 	}
 	if !ok {
 		// untested, if you know how to test it on windows, please open an issue
+		// this lacks the feature of cleaning a line not ending by '\n' for now
 		_, _ = fmt.Fprint(out, strings.Repeat(clear, lineCount))
 		return
 	}
