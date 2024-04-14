@@ -30,15 +30,6 @@ func ForceUpdate() {
 	mtx.Unlock()
 }
 
-// ForceTermSizeUpdate forces an update of the terminal size. This should not be necessary between Start() and Stop().
-func ForceTermSizeUpdate() (ts TermSize) {
-	mtx.Lock()
-	termSize = getTermSize()
-	ts = termSize
-	mtx.Unlock()
-	return
-}
-
 // SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
 // There is no need to end each line with a '\n' as it will be added automatically.
 func SetMultiLinesUpdateFx(fx func() []string) {

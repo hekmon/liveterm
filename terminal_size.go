@@ -29,3 +29,12 @@ type TermSize struct {
 func GetTermSize() TermSize {
 	return termSize
 }
+
+// ForceTermSizeUpdate forces an update of the terminal size. This should not be necessary between Start() and Stop().
+func ForceTermSizeUpdate() (ts TermSize) {
+	mtx.Lock()
+	termSize = getTermSize()
+	ts = termSize
+	mtx.Unlock()
+	return
+}
