@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hekmon/termlive"
+	"github.com/hekmon/termlive/v2"
 )
 
 type postalCounter struct {
