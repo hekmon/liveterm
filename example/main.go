@@ -24,7 +24,7 @@ func (pc *postalCounter) GetCounterWithTermInfos(termSize termlive.TermSize) (ou
 	output = make([]string, termSize.Rows-1)
 	for lineIndex := 0; lineIndex < len(output); lineIndex++ {
 		if lineIndex == termSize.Rows/2 {
-			output[lineIndex] = fmt.Sprintf("%*s%s%*s", (termSize.Cols-counterLen)/2, "", counterStr, termSize.Cols-((termSize.Cols-counterLen)/2), "")
+			output[lineIndex] = fmt.Sprintf("%*s%s", (termSize.Cols-counterLen)/2, "", counterStr)
 		}
 	}
 	return
@@ -62,7 +62,7 @@ func main() {
 
 	// Set the function that will return the data to be displayed
 	// This can be done or changed even after Start() has been called
-	termlive.SetSingleLineUpdateFx(pc.GetCounter)
+	// termlive.SetSingleLineUpdateFx(pc.GetCounter)
 	// termlive.SetMultiLinesUpdateFx(func() []string {
 	// 	return pc.GetCounterWithTermInfos(termlive.GetTermSize())
 	// })
