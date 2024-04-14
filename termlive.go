@@ -60,7 +60,6 @@ func SetSingleLineUpdateFx(fx func() string) {
 }
 
 // SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
-// You are responsible for adding the trailing '\n' at the end.
 func SetRawUpdateFx(fx func() []byte) {
 	mtx.Lock()
 	getterLines = nil

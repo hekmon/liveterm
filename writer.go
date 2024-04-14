@@ -44,10 +44,8 @@ func update() {
 
 // erase is unsafe ! It must be called within a mutex lock by one of its callers
 func erase() {
-	if lineCount > 0 {
-		clearLines()
-		lineCount = 0
-	}
+	clearLines()
+	lineCount = 0
 }
 
 // write is unsafe ! It must be called within a mutex lock by one of its callers
