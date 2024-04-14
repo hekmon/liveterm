@@ -27,6 +27,7 @@ func getTermSize() (ts TermSize) {
 
 // startListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
 func startListeningForTermResize() {
+	// unsupported on windows, but worker will still try to read from channel: it must exist
 	termSizeChan = make(chan os.Signal, 1)
 }
 
