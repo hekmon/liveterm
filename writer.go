@@ -201,7 +201,6 @@ func Bypass() io.Writer {
 
 type bypass struct{}
 
-// Each write will retrigger the update of the previous dynamic data even if out of tick.
 func (bypass) Write(p []byte) (n int, err error) {
 	defer mtx.Unlock()
 	mtx.Lock()
@@ -216,7 +215,7 @@ func (bypass) Write(p []byte) (n int, err error) {
 	if n, err = out.Write(p); err != nil {
 		return
 	}
-	// rewrite dynamic data after it
+	// rewrite the last known dynamic data after it
 	_, err = write()
 	return
 }
