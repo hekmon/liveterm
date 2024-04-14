@@ -38,7 +38,7 @@ func init() {
 	}
 }
 
-// GetTermWidth returns the current terminal width
+// GetTermSize returns the last known terminal size (updated at each refresh/update interval).
 func GetTermSize() (cols int, rows int) {
 	return termCols, termRows
 }
