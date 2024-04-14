@@ -4,6 +4,7 @@ package termlive
 
 import (
 	"os"
+	"os/signal"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -14,7 +15,7 @@ type windowSize struct {
 	cols uint16
 }
 
-func getTermSize() (cols int, rows int) {
+func getTermSize() (ts TermSize) {
 	var (
 		term *os.File
 		err  error
@@ -22,17 +23,32 @@ func getTermSize() (cols int, rows int) {
 	if runtime.GOOS == "openbsd" {
 		term, err = os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err != nil {
-			return 0, 0
+			return
 		}
 		defer term.Close()
 	} else {
 		term, err = os.OpenFile("/dev/tty", os.O_WRONLY, 0)
 		if err != nil {
-			return 0, 0
+			return
 		}
 		defer term.Close()
 	}
 	var sz windowSize
 	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, term.Fd(), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&sz)))
-	return int(sz.cols), int(sz.rows)
+	ts.Cols, ts.Rows = int(sz.cols), int(sz.rows)
+	return
+}
+
+// startListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
+func startListeningForTermResize() {
+	termSizeChan = make(chan os.Signal, 1)
+	signal.Notify(termSizeChan, syscall.SIGWINCH)
+	termSizeAutoUpdate = true
+}
+
+// stopListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
+func stopListeningForTermResize() {
+	termSizeAutoUpdate = false
+	signal.Stop(termSizeChan)
+	termSizeChan = nil
 }

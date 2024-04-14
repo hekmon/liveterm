@@ -17,32 +17,16 @@ var (
 	RefreshInterval = 100 * time.Millisecond // RefreshInterval is the default refresh interval to update the ui
 	UseStdErr       = false                  // use StdErr instead of StdOut
 	// Internal
-	termCols        int
-	termRows        int
-	overFlowHandled bool
-	out             io.Writer
-	ticker          *time.Ticker
-	tdone           chan bool
-	getterLines     func() []string
-	getterLine      func() string
-	getterRaw       func() []byte
-	buf             bytes.Buffer
-	lineCount       int
-	mtx             sync.Mutex
+	out         io.Writer
+	ticker      *time.Ticker
+	tdone       chan bool
+	getterLines func() []string
+	getterLine  func() string
+	getterRaw   func() []byte
+	buf         bytes.Buffer
+	lineCount   int
+	mtx         sync.Mutex
 )
-
-func init() {
-	// Determine if overflow must be handled
-	termCols, termRows = getTermSize()
-	if termCols != 0 {
-		overFlowHandled = true
-	}
-}
-
-// GetTermSize returns the last known terminal size (updated at each refresh/update interval).
-func GetTermSize() (cols int, rows int) {
-	return termCols, termRows
-}
 
 // SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
 // There is no need to end each line with a '\n' as it will be added automatically.
@@ -91,6 +75,7 @@ func Start() {
 	}
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
+	startListeningForTermResize()
 	go worker()
 }
 
@@ -116,16 +101,22 @@ func worker() {
 			mtx.Lock()
 			update()
 			mtx.Unlock()
+		case <-termSizeChan:
+			mtx.Lock()
+			termSize = getTermSize()
+			mtx.Unlock()
 		case clear = <-tdone:
 			mtx.Lock()
 			ticker.Stop()
+			ticker = nil
+			stopListeningForTermResize()
 			if clear {
 				erase()
 			} else {
-				update() // update ui one last time with latest possible data
+				// update ui one last time with latest possible data
+				update()
 			}
 			out = nil
-			ticker = nil
 			getterLines = nil
 			getterLine = nil
 			getterRaw = nil
@@ -172,9 +163,9 @@ func erase() {
 
 // write is unsafe ! It must be called within a mutex lock by one of its callers
 func write() (n int, err error) {
-	// Update current terminal size if we managed to get a size during init
-	if overFlowHandled {
-		termCols, termRows = getTermSize()
+	// Update current terminal size if we managed to get a size during init but were not able to get it automatically
+	if overFlowHandled && !termSizeAutoUpdate {
+		termSize = getTermSize()
 	}
 	// Count the number of actual term lines we are about to write for futur clearLines() call
 	var currentLine bytes.Buffer
@@ -184,7 +175,7 @@ func write() (n int, err error) {
 			currentLine.Reset()
 		} else if overFlowHandled {
 			currentLine.Write([]byte{b})
-			if currentLine.Len() > termCols {
+			if currentLine.Len() > termSize.Cols {
 				lineCount++
 				currentLine.Reset()
 			}
