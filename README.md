@@ -69,5 +69,5 @@ termlive.Stop(false)
 ## Installation
 
 ```sh
-$ go get -v github.com/hekmon/termlive
+$ go get -v github.com/hekmon/termlive/v2
 ```
