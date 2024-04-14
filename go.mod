@@ -1,4 +1,4 @@
-module github.com/hekmon/termlive/v2
+module github.com/hekmon/termlive
 
 go 1.18
 
