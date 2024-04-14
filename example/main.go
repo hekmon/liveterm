@@ -62,7 +62,7 @@ func main() {
 
 	// Set the function that will return the data to be displayed
 	// This can be done or changed even after Start() has been called
-	// termlive.SetSingleLineUpdateFx(pc.GetCounter)
+	termlive.SetSingleLineUpdateFx(pc.GetCounter)
 	// termlive.SetMultiLinesUpdateFx(func() []string {
 	// 	return pc.GetCounterWithTermInfos(termlive.GetTermSize())
 	// })
