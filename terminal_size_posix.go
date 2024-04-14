@@ -1,6 +1,6 @@
 //go:build !windows
 
-package termlive
+package liveterm
 
 import (
 	"os"

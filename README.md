@@ -1,7 +1,7 @@
-# termlive
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/termlive)](https://pkg.go.dev/github.com/hekmon/termlive)
+# liveterm
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/liveterm)](https://pkg.go.dev/github.com/hekmon/liveterm)
 
-`termlive` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](https://github.com/gosuri/uilive).
+`liveterm` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](https://github.com/gosuri/uilive).
 
 It changes its update model from push to pull and add features such as:
 * Helpers to get up to date terminal size to help user formats its data
@@ -28,12 +28,12 @@ This can cause performance issue when your data change very frequently:
 
 You could throttle you data update with your own ticker but you will end up with 2 tickers on both side, not in sync. Why not use only one ?
 
-### termlive
+### liveterm
 
-With `termlive` I wanted a more efficient, sync pull based approach:
+With `liveterm` I wanted a more efficient, sync pull based approach:
 * You register a function that returns the data you want to be (re)printed
-* At each tick, `termlive` will call that function to get up to date data before printing it
-* Between each tick, `termlive` sleeps and no buffer or mutex are used for nothing
+* At each tick, `liveterm` will call that function to get up to date data before printing it
+* Between each tick, `liveterm` sleeps and no buffer or mutex are used for nothing
 
 ## Usage Example
 
@@ -43,25 +43,25 @@ Simplified:
 
 ```go
 // Change default configuration if needed
-termlive.RefreshInterval = 100 * time.Millisecond
-termlive.UseStdErr = false
+liveterm.RefreshInterval = 100 * time.Millisecond
+liveterm.UseStdErr = false
 
 // Set the function that will return the data to be displayed
 // This can be done or changed even after Start() has been called
-termlive.SetSingleLineUpdateFx(getStatsFx)
+liveterm.SetSingleLineUpdateFx(getStatsFx)
 
 // Start live printing
-termlive.Start()
+liveterm.Start()
 
 // [ ... ]
 
-// Let's write something to stdout while termlive is running
-fmt.Fprintf(termlive.Bypass(), "This is a message that will be displayed on stdout while the counter is running\n")
+// Let's write something to stdout while liveterm is running
+fmt.Fprintf(liveterm.Bypass(), "This is a message that will be displayed on stdout while the counter is running\n")
 
 // [ ... ]
 
 // Release stdout
-termlive.Stop(false)
+liveterm.Stop(false)
 ```
 
 ![Example output](example/example.gif)
@@ -69,5 +69,5 @@ termlive.Stop(false)
 ## Installation
 
 ```sh
-$ go get -v github.com/hekmon/termlive
+$ go get -v github.com/hekmon/liveterm
 ```

@@ -1,4 +1,4 @@
-package termlive
+package liveterm
 
 import (
 	"bytes"
@@ -78,9 +78,9 @@ type bypass struct{}
 func (bypass) Write(p []byte) (n int, err error) {
 	defer mtx.Unlock()
 	mtx.Lock()
-	// if termlive is not started, out is nil
+	// if liveterm is not started, out is nil
 	if out == nil {
-		err = errors.New("termlive is not started, can not write to terminal")
+		err = errors.New("liveterm is not started, can not write to terminal")
 		return
 	}
 	// erase current dynamic data

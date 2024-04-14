@@ -1,4 +1,4 @@
-package termlive
+package liveterm
 
 import "os"
 
