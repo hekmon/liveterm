@@ -28,7 +28,7 @@ func ForceUpdate() {
 	mtx.Unlock()
 }
 
-// ForceTermSizeUpdate forces an update of the terminal size. This should not be necessary.
+// ForceTermSizeUpdate forces an update of the terminal size. This should not be necessary between Start() and Stop().
 func ForceTermSizeUpdate() (ts TermSize) {
 	mtx.Lock()
 	termSize = getTermSize()
