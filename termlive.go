@@ -11,7 +11,9 @@ var (
 	// Config (must be changed before calling Start())
 	RefreshInterval = 100 * time.Millisecond // RefreshInterval is the default refresh interval to update the ui
 	UseStdErr       = false                  // use StdErr instead of StdOut
-	// Internal
+)
+
+var (
 	out         io.Writer
 	ticker      *time.Ticker
 	tdone       chan bool
@@ -88,7 +90,8 @@ func Start() {
 	go worker()
 }
 
-// Stop stops the worker that updates the terminal. Clear will erase dynamic data from the terminal before stopping.
+// Stop stops the worker that updates the terminal.
+// Clear will erase dynamic data from the terminal before stopping, otherwise it will update term one last time before stopping.
 // Choosen output (stdout or stderr) can be used again directly after this call.
 func Stop(clear bool) {
 	tdone <- clear

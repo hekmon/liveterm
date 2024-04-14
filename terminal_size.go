@@ -24,7 +24,8 @@ type TermSize struct {
 }
 
 // GetTermSize returns the last known terminal size.
-// It is either updated automatically on terminal resize on POSIX or updated at each refresh/update interval for windows.
+// It is either updated automatically on terminal resize on Unix like systems
+// or updated at each refresh/update interval for windows.
 func GetTermSize() TermSize {
 	return termSize
 }

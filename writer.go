@@ -19,7 +19,11 @@ func update() {
 	if (getterLines == nil && getterLine == nil && getterRaw == nil) || out == nil {
 		return
 	}
-	// Rebuild buffer with current data
+	// Update terminal size manually if necessary before calling data fx (which may rely on termSize)
+	if overFlowHandled && !termSizeAutoUpdate {
+		termSize = getTermSize()
+	}
+	// Rebuild buffer with fresh data
 	buf.Reset()
 	switch {
 	case getterLines != nil:
@@ -48,10 +52,6 @@ func erase() {
 
 // write is unsafe ! It must be called within a mutex lock by one of its callers
 func write() (n int, err error) {
-	// Update current terminal size if we managed to get a size during init but were not able to get it automatically
-	if overFlowHandled && !termSizeAutoUpdate {
-		termSize = getTermSize()
-	}
 	// Count the number of actual term lines we are about to write for futur clearLines() call
 	var currentLine bytes.Buffer
 	for _, b := range buf.Bytes() {
