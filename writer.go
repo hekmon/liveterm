@@ -16,7 +16,8 @@ var (
 	RefreshInterval = 100 * time.Millisecond // RefreshInterval is the default refresh interval to update the ui
 	UseStdErr       = false                  // use StdErr instead of StdOut
 	// Internal
-	termWidth       int
+	termCols        int
+	termRows        int
 	overFlowHandled bool
 	out             io.Writer
 	ticker          *time.Ticker
@@ -30,15 +31,16 @@ var (
 )
 
 func init() {
-	termWidth, _ = getTermSize()
-	if termWidth != 0 {
+	// Determine if overflow must be handled
+	termCols, termRows = getTermSize()
+	if termCols != 0 {
 		overFlowHandled = true
 	}
 }
 
 // GetTermWidth returns the current terminal width
-func GetTermWidth() int {
-	return termWidth
+func GetTermSize() (cols int, rows int) {
+	return termCols, termRows
 }
 
 // SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
@@ -169,6 +171,10 @@ func erase() {
 
 // write is unsafe ! It must be called within a mutex lock by one of its callers
 func write() (n int, err error) {
+	// Update current terminal size if we managed to get a size during init
+	if overFlowHandled {
+		termCols, termRows = getTermSize()
+	}
 	// Count the number of actual term lines we are about to write for futur clearLines() call
 	var currentLine bytes.Buffer
 	for _, b := range buf.Bytes() {
@@ -177,7 +183,7 @@ func write() (n int, err error) {
 			currentLine.Reset()
 		} else if overFlowHandled {
 			currentLine.Write([]byte{b})
-			if currentLine.Len() > termWidth {
+			if currentLine.Len() > termCols {
 				lineCount++
 				currentLine.Reset()
 			}

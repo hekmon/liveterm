@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func getTermSize() (int, int) {
+func getTermSize() (cols int, rows int) {
 	out, err := os.Open("CONOUT$")
 	if err != nil {
 		return 0, 0
