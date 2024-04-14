@@ -16,7 +16,7 @@ func (pc *postalCounter) GetCounter() string {
 	return strconv.Itoa(pc.counter)
 }
 
-func (pc *postalCounter) GetCounterWithTermInfos(termSize termlive.TermSize) (output []string) {
+func (pc *postalCounter) GetCenteredCounter(termSize termlive.TermSize) (output []string) {
 	// Let's center the counter within the terminal window
 	// It will adjust even if the terminal is resized
 	counterStr := strconv.Itoa(pc.counter)
@@ -64,7 +64,7 @@ func main() {
 	// This can be done or changed even after Start() has been called
 	termlive.SetSingleLineUpdateFx(pc.GetCounter)
 	// termlive.SetMultiLinesUpdateFx(func() []string {
-	// 	return pc.GetCounterWithTermInfos(termlive.GetTermSize())
+	// 	return pc.GetCenteredCounter(termlive.GetTermSize())
 	// })
 
 	// Start live printing
