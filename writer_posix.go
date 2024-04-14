@@ -9,9 +9,9 @@ import (
 
 // https://shiroyasha.svbtle.com/escape-sequences-a-quick-guide-1
 var (
-	cursorUP          = fmt.Sprintf("%c[1A", esc)
+	cursorUP1line     = fmt.Sprintf("%c[%dA", esc, 1)
 	clearLine         = fmt.Sprintf("%c[2K", esc)
-	clearPreviousLine = cursorUP + clearLine
+	clearPreviousLine = cursorUP1line + clearLine
 )
 
 func clearLines() {
