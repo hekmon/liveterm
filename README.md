@@ -5,9 +5,11 @@
 
 It changes its update model from push to pull and add features such as:
 * Helpers to get up to date terminal size to help user formats its data
-    * Size is automatically updated if terminal is resized, simply call the helper at the beginning of your formating fx
+    * Size is automatically updated if terminal is resized, simply call the helper at the beginning of your formating fx (see the [example](example/main.go))
 * Support for incomplete lines
-    * User can push raw bytes even if not ended by `\n` (cursor will stay at the end of the line)
+    * User can push raw bytes even if not ended by `\n`
+    * Cursor will stay at the end of the line (instead of the beginning of a new line)
+    * But the line will be erased properly anyway
 
 ## Update model
 
@@ -36,6 +38,8 @@ With `termlive` I wanted a more efficient, sync pull based approach:
 ## Usage Example
 
 Full source for the below example is in [example/main.go](example/main.go).
+
+Simplified:
 
 ```go
 // Change default configuration if needed
