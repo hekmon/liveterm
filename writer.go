@@ -6,9 +6,6 @@ import (
 	"io"
 )
 
-// ESC is the ASCII code for escape character
-const esc = 27
-
 var (
 	buf       bytes.Buffer
 	lineCount int
