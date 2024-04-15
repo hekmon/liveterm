@@ -2,8 +2,6 @@ package liveterm
 
 import (
 	"bytes"
-	"errors"
-	"io"
 )
 
 var (
@@ -63,31 +61,4 @@ func write() (n int, err error) {
 	}
 	// Write the current state
 	return out.Write(buf.Bytes())
-}
-
-// Bypass creates an io.Writer which allow to write permalent stuff to the terminal while liveterm is running.
-// Do not forget to include a final '\n' when writting to it.
-func Bypass() io.Writer {
-	return bypass{}
-}
-
-type bypass struct{}
-
-func (bypass) Write(p []byte) (n int, err error) {
-	defer mtx.Unlock()
-	mtx.Lock()
-	// if liveterm is not started, out is nil
-	if out == nil {
-		err = errors.New("liveterm is not started, can not write to terminal")
-		return
-	}
-	// erase current dynamic data
-	erase()
-	// write permanent data
-	if n, err = out.Write(p); err != nil {
-		return
-	}
-	// rewrite the last known dynamic data after it
-	_, err = write()
-	return
 }

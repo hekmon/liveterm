@@ -53,13 +53,15 @@ func clearLines() {
 	if !ok || isatty.IsTerminal(fout.Fd()) {
 		/*
 			Either the output:
-			- does not have a file descriptor: windows specific code cannot be used, let's try to use terminal escape codes and hope it works
-			- has a file descriptor and is a terminal: definitely use terminal escape codes
+			- does not have a file descriptor: we can not test if it is a terminal and
+			  windows legacy code cannot be used either, let's try to use terminal escape codes and hope it works
+			- has a file descriptor and is a terminal (modern windows): definitely use terminal escape codes
 		*/
 		terminalCleanUp()
 		return
 	}
-	// output has a file descriptor but is not a tty: do not use terminal escape codes and use windows specific code
+	// output has a file descriptor but is not a tty: Let's go with legacy windows console manipulation
+	// more on: https://en.wikipedia.org/wiki/ANSI_escape_code#DOS_and_Windows
 	fd := fout.Fd()
 	csbi := getCSBInfos(fd)
 	// Clear the current line in case the cursor is not at the beginning of the line,

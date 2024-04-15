@@ -10,7 +10,7 @@ Easy to read, but with some mistakes it seems:
 https://shiroyasha.svbtle.com/escape-sequences-a-quick-guide-1
 
 More accurate but not complete:
-https://en.wikipedia.org/wiki/ANSI_escape_code
+https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_(Control_Sequence_Introducer)_sequences
 
 Complete ?
 https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
