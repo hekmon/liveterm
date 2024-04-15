@@ -9,7 +9,7 @@ import (
 
 var (
 	// Config (must be changed before calling Start())
-	RefreshInterval = 100 * time.Millisecond // RefreshInterval is the default refresh interval to update the ui
+	RefreshInterval = 100 * time.Millisecond // RefreshInterval defines the time between each terminal update
 	UseStdErr       = false                  // use StdErr instead of StdOut
 )
 
@@ -23,14 +23,14 @@ var (
 	mtx         sync.Mutex
 )
 
-// ForceUpdate forces an update of the terminal even if out of tick
+// ForceUpdate forces an update of the terminal with dynamic data between ticks.
 func ForceUpdate() {
 	mtx.Lock()
 	update()
 	mtx.Unlock()
 }
 
-// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
+// SetMultiLinesDataFx sets the function that will be called to get data update.
 // There is no need to end each line with a '\n' as it will be added automatically.
 func SetMultiLinesUpdateFx(fx func() []string) {
 	mtx.Lock()
@@ -40,7 +40,7 @@ func SetMultiLinesUpdateFx(fx func() []string) {
 	mtx.Unlock()
 }
 
-// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
+// SetSingleLineUpdateFx sets the function that will be called to get data update.
 // There is no need to end each line with a '\n' as it will be added automatically.
 func SetSingleLineUpdateFx(fx func() string) {
 	mtx.Lock()
@@ -50,7 +50,7 @@ func SetSingleLineUpdateFx(fx func() string) {
 	mtx.Unlock()
 }
 
-// SetMultiLinesDataFx sets the function that returns the data to be displayed in the terminal.
+// SetRawUpdateFx sets the function that will be called to get data update.
 func SetRawUpdateFx(fx func() []byte) {
 	mtx.Lock()
 	getterLines = nil
@@ -61,6 +61,7 @@ func SetRawUpdateFx(fx func() []byte) {
 
 // Start starts the updater in a non-blocking manner.
 // After calling Start(), the output (stdout or stderr) should not be used directly anymore.
+// See Bypass() if you need to print regular things while termlive is running.
 func Start() {
 	defer mtx.Unlock()
 	mtx.Lock()

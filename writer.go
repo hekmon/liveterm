@@ -68,9 +68,10 @@ func write() (n int, err error) {
 	return out.Write(buf.Bytes())
 }
 
-// Bypass creates an io.Writer which allows to write a permalent lines to the terminal. Do not forget to include a final '\n' when writting to it.
+// Bypass creates an io.Writer which allow to write permalent stuff to the terminal while liveterm is running.
+// Do not forget to include a final '\n' when writting to it.
 func Bypass() io.Writer {
-	return &bypass{}
+	return bypass{}
 }
 
 type bypass struct{}
