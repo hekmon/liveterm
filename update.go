@@ -16,7 +16,7 @@ func update() {
 	}
 	// Update terminal size manually if necessary before calling data fx (which may rely on termSize)
 	if overFlowHandled && !termSizeAutoUpdate {
-		termSize = getTermSize()
+		termCols, termRows = getTermSize()
 	}
 	// Rebuild buffer with fresh data
 	buf.Reset()
@@ -53,7 +53,7 @@ func write() (n int, err error) {
 			currentLine.Reset()
 		} else if overFlowHandled {
 			currentLine.Write([]byte{b})
-			if currentLine.Len() > termSize.Cols {
+			if currentLine.Len() > termCols {
 				lineCount++
 				currentLine.Reset()
 			}

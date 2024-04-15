@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func getTermSize() (ts TermSize) {
+func getTermSize() (cols, rows int) {
 	// Open term
 	out, err := os.Open("CONOUT$")
 	if err != nil {
@@ -21,7 +21,7 @@ func getTermSize() (ts TermSize) {
 		return
 	}
 	// Extract term size
-	ts.Cols, ts.Rows = int(csbi.window.right-csbi.window.left+1), int(csbi.window.bottom-csbi.window.top+1)
+	termCols, termRows = int(csbi.window.right-csbi.window.left+1), int(csbi.window.bottom-csbi.window.top+1)
 	return
 }
 

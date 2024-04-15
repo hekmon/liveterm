@@ -15,7 +15,7 @@ type windowSize struct {
 	cols uint16
 }
 
-func getTermSize() (ts TermSize) {
+func getTermSize() (cols, rows int) {
 	var (
 		term *os.File
 		err  error
@@ -35,8 +35,7 @@ func getTermSize() (ts TermSize) {
 	}
 	var sz windowSize
 	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, term.Fd(), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&sz)))
-	ts.Cols, ts.Rows = int(sz.cols), int(sz.rows)
-	return
+	return int(sz.cols), int(sz.rows)
 }
 
 // startListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers

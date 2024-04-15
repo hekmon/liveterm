@@ -96,7 +96,7 @@ func worker() {
 			mtx.Unlock()
 		case <-termSizeChan:
 			mtx.Lock()
-			termSize = getTermSize()
+			termCols, termRows = getTermSize()
 			mtx.Unlock()
 		case clear = <-tdone:
 			mtx.Lock()

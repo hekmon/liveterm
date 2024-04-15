@@ -3,7 +3,8 @@ package liveterm
 import "os"
 
 var (
-	termSize           TermSize
+	termCols           int
+	termRows           int
 	overFlowHandled    bool
 	termSizeAutoUpdate bool
 	termSizeChan       chan os.Signal
@@ -11,8 +12,8 @@ var (
 
 func init() {
 	// Determine if overflow must be handled
-	termSize = getTermSize()
-	if termSize.Cols != 0 {
+	termCols, termRows = getTermSize()
+	if termCols != 0 {
 		overFlowHandled = true
 	}
 }
@@ -26,15 +27,16 @@ type TermSize struct {
 // GetTermSize returns the last known terminal size.
 // It is either updated automatically on terminal resize on Unix like systems
 // or updated at each refresh/update interval for windows.
-func GetTermSize() TermSize {
-	return termSize
+func GetTermSize() (cols, rows int) {
+	return termCols, termRows
 }
 
 // ForceTermSizeUpdate forces an update of the terminal size. This should not be necessary between Start() and Stop().
-func ForceTermSizeUpdate() (ts TermSize) {
+func ForceTermSizeUpdate() (cols, rows int) {
 	mtx.Lock()
-	termSize = getTermSize()
-	ts = termSize
+	termCols, termRows = getTermSize()
+	cols = termCols
+	rows = termRows
 	mtx.Unlock()
 	return
 }
