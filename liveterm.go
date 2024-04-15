@@ -10,8 +10,8 @@ import (
 
 var (
 	// Config (must be changed before calling Start())
-	RefreshInterval = 100 * time.Millisecond // RefreshInterval defines the time between each terminal update
-	UseStdErr       = false                  // use StdErr instead of StdOut
+	RefreshInterval           = 100 * time.Millisecond // RefreshInterval defines the time between each output refresh
+	Output          io.Writer = os.Stdout              // Terminal Output
 )
 
 var (
@@ -71,11 +71,7 @@ func Start() {
 		return
 	}
 	// Start the updater
-	if UseStdErr {
-		out = os.Stderr
-	} else {
-		out = os.Stdout
-	}
+	out = Output
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
 	startListeningForTermResize()

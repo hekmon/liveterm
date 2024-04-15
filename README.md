@@ -44,7 +44,7 @@ Simplified:
 ```go
 // Change default configuration if needed
 liveterm.RefreshInterval = 100 * time.Millisecond
-liveterm.UseStdErr = false
+liveterm.Output = os.Stdout
 
 // Set the function that will return the data to be displayed
 // This can be done or changed even after Start() has been called
