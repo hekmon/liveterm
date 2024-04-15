@@ -62,7 +62,7 @@ func SetRawUpdateFx(fx func() []byte) {
 
 // Start starts the updater in a non-blocking manner.
 // After calling Start(), the output (stdout or stderr) should not be used directly anymore.
-// See Bypass() if you need to print regular things while termlive is running.
+// See Bypass() if you need to print regular things while liveterm is running.
 func Start() {
 	defer mtx.Unlock()
 	mtx.Lock()
