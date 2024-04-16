@@ -4,7 +4,6 @@ package liveterm
 
 import (
 	"os"
-	"os/signal"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -36,18 +35,4 @@ func getTermSize() (cols, rows int) {
 	var sz windowSize
 	_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, term.Fd(), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&sz)))
 	return int(sz.cols), int(sz.rows)
-}
-
-// startListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
-func startListeningForTermResize() {
-	termSizeChan = make(chan os.Signal, 1)
-	signal.Notify(termSizeChan, syscall.SIGWINCH)
-	termSizeAutoUpdate = true
-}
-
-// stopListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
-func stopListeningForTermResize() {
-	termSizeAutoUpdate = false
-	signal.Stop(termSizeChan)
-	termSizeChan = nil
 }

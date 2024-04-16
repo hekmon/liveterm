@@ -74,7 +74,6 @@ func Start() {
 	out = Output
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
-	startListeningForTermResize()
 	go worker()
 }
 
@@ -94,15 +93,10 @@ func worker() {
 			mtx.Lock()
 			update()
 			mtx.Unlock()
-		case <-termSizeChan:
-			mtx.Lock()
-			termCols, termRows = getTermSize()
-			mtx.Unlock()
 		case clear = <-tdone:
 			mtx.Lock()
 			ticker.Stop()
 			ticker = nil
-			stopListeningForTermResize()
 			if clear {
 				erase()
 			} else {
@@ -145,6 +139,6 @@ func (bypass) Write(p []byte) (n int, err error) {
 		return
 	}
 	// rewrite the last known dynamic data after it
-	_, err = write()
+	_, err = out.Write(lastBuf.Bytes())
 	return
 }

@@ -2,13 +2,19 @@ package liveterm
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/mattn/go-runewidth"
 )
 
+const (
+	resizeWait = 500 * time.Millisecond
+)
+
 var (
-	buf       bytes.Buffer
-	lineCount int
+	buf, lastBuf bytes.Buffer
+	waitUntil    time.Time
+	lineCount    int
 )
 
 // update is unsafe ! It must be called within a mutex lock by one of its callers
@@ -16,11 +22,23 @@ func update() {
 	if (getterLines == nil && getterLine == nil && getterRaw == nil) || out == nil {
 		return
 	}
-	// Update terminal size manually if necessary before calling data fx (which may rely on termSize)
-	if overFlowHandled && !termSizeAutoUpdate {
+	// Update terminal size for erase
+	if overFlowHandled {
+		termColsPrevious, termRowsPrevious = termCols, termRows
 		termCols, termRows = getTermSize()
+		if termCols != termColsPrevious || termRows != termRowsPrevious {
+			// term has been resized, wait for stability before computing the lines to erase
+			// in case the terminal resizing is not done yet
+			waitUntil = time.Now().Add(resizeWait)
+			return
+		}
+		// Size is stable between 2 ticks, but are we in a wait period ?
+		// Ensure fast rize is handled correctly
+		if waitUntil.After(time.Now()) {
+			return
+		}
 	}
-	// Rebuild buffer with fresh data
+	// Build unused buffer with fresh data
 	buf.Reset()
 	switch {
 	case getterLines != nil:
@@ -34,22 +52,19 @@ func update() {
 	case getterRaw != nil:
 		buf.Write(getterRaw())
 	}
-	// Update terminal with it
+	// Cleanup terminal based on previous data and current terminal size
 	erase()
-	_, _ = write()
+	// Update terminal with it
+	_, _ = out.Write(buf.Bytes())
+	// Swap buffers to minimze memory allocation
+	lastBuf, buf = buf, lastBuf
 }
 
 // erase is unsafe ! It must be called within a mutex lock by one of its callers
 func erase() {
-	clearLines()
 	lineCount = 0
-}
-
-// write is unsafe ! It must be called within a mutex lock by one of its callers
-func write() (n int, err error) {
-	// Count the number of actual term lines we are about to write for futur clearLines() call
 	var currentLineWidth, runeWidth int
-	for _, r := range buf.String() {
+	for _, r := range lastBuf.String() {
 		if r == '\n' {
 			lineCount++
 			currentLineWidth = 0
@@ -64,6 +79,5 @@ func write() (n int, err error) {
 			}
 		}
 	}
-	// Write the current state
-	return out.Write(buf.Bytes())
+	clearLines()
 }

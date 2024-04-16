@@ -24,14 +24,3 @@ func getTermSize() (cols, rows int) {
 	termCols, termRows = int(csbi.window.right-csbi.window.left+1), int(csbi.window.bottom-csbi.window.top+1)
 	return
 }
-
-// startListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
-func startListeningForTermResize() {
-	// unsupported on windows, but worker will still try to read from channel: it must exist
-	termSizeChan = make(chan os.Signal, 1)
-}
-
-// stopListeningForTermResize is unsafe ! It must be called within a mutex lock by one of its callers
-func stopListeningForTermResize() {
-	termSizeChan = nil
-}
