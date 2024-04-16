@@ -2,6 +2,8 @@ package liveterm
 
 import (
 	"bytes"
+
+	"github.com/mattn/go-runewidth"
 )
 
 var (
@@ -46,16 +48,19 @@ func erase() {
 // write is unsafe ! It must be called within a mutex lock by one of its callers
 func write() (n int, err error) {
 	// Count the number of actual term lines we are about to write for futur clearLines() call
-	var currentLine bytes.Buffer
-	for _, b := range buf.Bytes() {
-		if b == '\n' {
+	var currentLineWidth, runeWidth int
+	for _, r := range buf.String() {
+		if r == '\n' {
 			lineCount++
-			currentLine.Reset()
-		} else if overFlowHandled {
-			currentLine.Write([]byte{b})
-			if currentLine.Len() > termCols {
+			currentLineWidth = 0
+			continue
+		}
+		if overFlowHandled {
+			runeWidth = runewidth.RuneWidth(r)
+			currentLineWidth += runeWidth
+			if currentLineWidth > termCols {
 				lineCount++
-				currentLine.Reset()
+				currentLineWidth = runeWidth
 			}
 		}
 	}

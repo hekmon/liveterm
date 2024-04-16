@@ -10,6 +10,10 @@ It changes its update model from push to pull and add features such as:
     * User can push raw bytes even if not ended by `\n`
     * Cursor will stay at the end of the line (instead of the beginning of a new line)
     * But the line will be erased properly anyway
+* Support for runes (Unicode)
+  * A rune can has length (byte representation) different from its column (printing) representation
+  * For example a rune with a 3 bytes representation can only use 2 columns on the terminal
+  * Computing the actual lines printed to the terminal (especially the original lines overflow and create new ones) in order to erase them after can not rely on bytes len with unicode
 
 ## Update model
 
