@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -20,11 +21,11 @@ func (pc *postalCounter) GetCenteredCounter() (output []string) {
 	// Let's center the counter within the terminal window
 	// It will adjust even if the terminal is resized
 	counterStr := strconv.Itoa(pc.counter)
-	termSize := liveterm.GetTermSize()
-	output = make([]string, termSize.Rows-1)
+	cols, rows := liveterm.GetTermSize()
+	output = make([]string, rows-1)
 	for lineIndex := 0; lineIndex < len(output); lineIndex++ {
 		if lineIndex == len(output)/2 {
-			output[lineIndex] = fmt.Sprintf("%*s%s", (termSize.Cols-len(counterStr))/2, "", counterStr)
+			output[lineIndex] = fmt.Sprintf("%*s%s", (cols-len(counterStr))/2, "", counterStr)
 		}
 	}
 	return
@@ -50,7 +51,7 @@ func main() {
 
 	// Change default configuration if needed
 	liveterm.RefreshInterval = 100 * time.Millisecond
-	liveterm.UseStdErr = false
+	liveterm.Output = os.Stdout
 
 	// Start our wild counter
 	pcDone := make(chan struct{})
