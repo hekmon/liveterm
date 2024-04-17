@@ -108,7 +108,6 @@ func worker() {
 			getterLine = nil
 			getterRaw = nil
 			buf.Reset()
-			lineCount = 0
 			close(tdone)
 			mtx.Unlock()
 			return

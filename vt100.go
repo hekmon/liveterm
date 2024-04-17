@@ -42,10 +42,10 @@ var (
 )
 
 // terminalCleanUp is unsafe ! It must be called within a mutex lock by one of its callers
-func terminalCleanUp() {
+func terminalCleanUp(linesCount int) {
 	// Clear the current line in case the cursor is not at the beginning of the line,
 	// for example if SetRawUpdateFx() has been used and no '\n' has been written at the end.
 	_, _ = fmt.Fprint(out, clearCurrentLine)
 	// clear the rest of the lines
-	_, _ = fmt.Fprint(out, strings.Repeat(clearPreviousLine, lineCount))
+	_, _ = fmt.Fprint(out, strings.Repeat(clearPreviousLine, linesCount))
 }

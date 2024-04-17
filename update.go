@@ -14,7 +14,6 @@ const (
 var (
 	buf, lastBuf bytes.Buffer
 	waitUntil    time.Time
-	lineCount    int
 )
 
 // update is unsafe ! It must be called within a mutex lock by one of its callers
@@ -62,11 +61,11 @@ func update() {
 
 // erase is unsafe ! It must be called within a mutex lock by one of its callers
 func erase() {
-	lineCount = 0
+	linesCount := 0
 	var currentLineWidth, runeWidth int
 	for _, r := range lastBuf.String() {
 		if r == '\n' {
-			lineCount++
+			linesCount++
 			currentLineWidth = 0
 			continue
 		}
@@ -74,10 +73,10 @@ func erase() {
 			runeWidth = runewidth.RuneWidth(r)
 			currentLineWidth += runeWidth
 			if currentLineWidth > termCols {
-				lineCount++
+				linesCount++
 				currentLineWidth = runeWidth
 			}
 		}
 	}
-	clearLines()
+	clearLines(linesCount)
 }

@@ -48,7 +48,7 @@ type fdWriter interface {
 }
 
 // clearLines is unsafe ! It must be called within a mutex lock by one of its callers
-func clearLines() {
+func clearLines(linesCount int) {
 	fout, ok := out.(fdWriter)
 	if !ok || isatty.IsTerminal(fout.Fd()) {
 		/*
@@ -58,7 +58,7 @@ func clearLines() {
 			- has a file descriptor and is a terminal (modern windows, see https://en.wikipedia.org/wiki/ANSI_escape_code#DOS_and_Windows):
 			  definitely use terminal escape codes
 		*/
-		terminalCleanUp()
+		terminalCleanUp(linesCount)
 		return
 	}
 	// output has a file descriptor but is not a tty: Let's go with legacy windows console manipulation
@@ -70,7 +70,7 @@ func clearLines() {
 	moveCursorFd(fd, csbi)
 	clearLineFd(fd, csbi)
 	// clear the rest of the lines
-	for i := 0; i < lineCount; i++ {
+	for i := 0; i < linesCount; i++ {
 		// move the cursor up
 		csbi.cursorPosition.y--
 		moveCursorFd(fd, csbi)
