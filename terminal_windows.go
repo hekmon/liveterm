@@ -3,12 +3,64 @@
 package liveterm
 
 import (
+	"errors"
 	"io"
+	"os"
 	"syscall"
 	"unsafe"
 
 	"github.com/mattn/go-isatty"
 )
+
+var (
+	outFd         uintptr
+	outIsTerminal bool
+)
+
+func openTerminal() (err error) {
+	terminalFile, err = os.Open("CONOUT$")
+	return
+}
+
+// fdWriter is a writer with a file descriptor.
+type fdWriter interface {
+	io.Writer
+	Fd() uintptr
+}
+
+func initTermOS() (err error) {
+	fout, ok := out.(fdWriter)
+	if !ok {
+		return errors.New("can not extract file descriptor from output writer")
+	}
+	outFd = fout.Fd()
+	outIsTerminal = isatty.IsTerminal(outFd)
+	return
+}
+
+func clearTermOS() {
+	outFd = 0
+	outIsTerminal = false
+}
+
+/*
+	Size related
+*/
+
+func getTermSize() (cols, rows int) {
+	// Get term infos
+	var csbi consoleScreenBufferInfo
+	ret, _, _ := procGetConsoleScreenBufferInfo.Call(terminalFile.Fd(), uintptr(unsafe.Pointer(&csbi)))
+	if ret == 0 {
+		return
+	}
+	// Extract term size
+	return int(csbi.window.right - csbi.window.left + 1), int(csbi.window.bottom - csbi.window.top + 1)
+}
+
+/*
+	Lines clearing related
+*/
 
 var (
 	kernel32                       = syscall.NewLazyDLL("kernel32.dll")
@@ -41,41 +93,26 @@ type consoleScreenBufferInfo struct {
 	maximumWindowSize coord
 }
 
-// fdWriter is a writer with a file descriptor.
-type fdWriter interface {
-	io.Writer
-	Fd() uintptr
-}
-
 // clearLines is unsafe ! It must be called within a mutex lock by one of its callers
 func clearLines(linesCount int) {
-	fout, ok := out.(fdWriter)
-	if !ok || isatty.IsTerminal(fout.Fd()) {
-		/*
-			Either the output:
-			- does not have a file descriptor: we can not test if it is a terminal and
-			  windows legacy code cannot be used either, let's try to use terminal escape codes and hope it works
-			- has a file descriptor and is a terminal (modern windows, see https://en.wikipedia.org/wiki/ANSI_escape_code#DOS_and_Windows):
-			  definitely use terminal escape codes
-		*/
+	if outIsTerminal {
 		terminalCleanUp(linesCount)
 		return
 	}
-	// output has a file descriptor but is not a tty: Let's go with legacy windows console manipulation
-	fd := fout.Fd()
-	csbi := getCSBInfos(fd)
+	// output is not a tty: Let's go with legacy windows console manipulation
+	csbi := getCSBInfos(outFd)
 	// Clear the current line in case the cursor is not at the beginning of the line,
 	// for example if SetRawUpdateFx() has been used and no '\n' has been written at the end.
 	csbi.cursorPosition.x = csbi.window.left
-	moveCursorFd(fd, csbi)
-	clearLineFd(fd, csbi)
+	moveCursorFd(outFd, csbi)
+	clearLineFd(outFd, csbi)
 	// clear the rest of the lines
 	for i := 0; i < linesCount; i++ {
 		// move the cursor up
 		csbi.cursorPosition.y--
-		moveCursorFd(fd, csbi)
+		moveCursorFd(outFd, csbi)
 		// clear the line
-		clearLineFd(fd, csbi)
+		clearLineFd(outFd, csbi)
 	}
 }
 

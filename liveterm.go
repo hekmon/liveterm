@@ -1,11 +1,19 @@
 package liveterm
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/mattn/go-runewidth"
+)
+
+const (
+	resizeWait = 500 * time.Millisecond
 )
 
 var (
@@ -15,13 +23,15 @@ var (
 )
 
 var (
-	out         io.Writer
-	ticker      *time.Ticker
-	tdone       chan bool
-	getterLines func() []string
-	getterLine  func() string
-	getterRaw   func() []byte
-	mtx         sync.Mutex
+	out          io.Writer
+	ticker       *time.Ticker
+	waitUntil    time.Time
+	buf, lastBuf bytes.Buffer
+	getterLines  func() []string
+	getterLine   func() string
+	getterRaw    func() []byte
+	mtx          sync.Mutex
+	tdone        chan bool
 )
 
 // ForceUpdate forces an update of the terminal with dynamic data between ticks.
@@ -29,6 +39,13 @@ func ForceUpdate() {
 	mtx.Lock()
 	update()
 	mtx.Unlock()
+}
+
+// GetTermSize returns the last known terminal size.
+// It is either updated automatically on terminal resize on Unix like systems
+// or updated at each refresh/update interval for windows.
+func GetTermSize() (cols, rows int) {
+	return termCols, termRows
 }
 
 // SetMultiLinesDataFx sets the function that will be called to get data update.
@@ -63,18 +80,23 @@ func SetRawUpdateFx(fx func() []byte) {
 // Start starts the updater in a non-blocking manner.
 // After calling Start(), the output (stdout or stderr) should not be used directly anymore.
 // See Bypass() if you need to print regular things while liveterm is running.
-func Start() {
+func Start() (err error) {
 	defer mtx.Unlock()
 	mtx.Lock()
 	// Nullify multiples calls to start
 	if ticker != nil {
 		return
 	}
+	// Try to open the terminal to gets its informations
+	if err = initTermInfos(); err != nil {
+		return fmt.Errorf("failed to init terminal: %w", err)
+	}
 	// Start the updater
 	out = Output
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
 	go worker()
+	return
 }
 
 // Stop stops the worker that updates the terminal.
@@ -107,12 +129,81 @@ func worker() {
 			getterLines = nil
 			getterLine = nil
 			getterRaw = nil
+			_ = clearTermInfos()
 			buf.Reset()
+			lastBuf.Reset()
 			close(tdone)
 			mtx.Unlock()
 			return
 		}
 	}
+}
+
+// update is unsafe ! It must be called within a mutex lock by one of its callers
+func update() {
+	if (getterLines == nil && getterLine == nil && getterRaw == nil) || out == nil {
+		return
+	}
+	// Update terminal size for erase
+	if overFlowHandled {
+		termColsPrevious, termRowsPrevious = termCols, termRows
+		termCols, termRows = getTermSize()
+		if termCols != termColsPrevious || termRows != termRowsPrevious {
+			// term has been resized, wait for stability before computing the lines to erase
+			// in case the terminal resizing is not done yet
+			waitUntil = time.Now().Add(resizeWait)
+			return
+		}
+		// Size is stable between 2 ticks, but are we in a wait period ?
+		// Ensure fast rize from the user is handled correctly and does not leave lines behind
+		if waitUntil.After(time.Now()) {
+			return
+		}
+	}
+	// Build unused buffer with fresh data
+	buf.Reset()
+	switch {
+	case getterLines != nil:
+		for _, line := range getterLines() {
+			buf.WriteString(line)
+			buf.WriteByte('\n')
+		}
+	case getterLine != nil:
+		buf.WriteString(getterLine())
+		buf.WriteByte('\n')
+	case getterRaw != nil:
+		buf.Write(getterRaw())
+	}
+	// Cleanup terminal based on previous data and current terminal size
+	erase()
+	// Update terminal with it
+	_, _ = out.Write(buf.Bytes())
+	// Swap buffers to minimze memory allocation
+	lastBuf, buf = buf, lastBuf
+}
+
+// erase is unsafe ! It must be called within a mutex lock by one of its callers
+func erase() {
+	// Given the previous data we printed and the current terminal size
+	// we can compute the number of lines to erase.
+	linesCount := 0
+	var currentLineWidth, runeWidth int
+	for _, r := range lastBuf.String() {
+		if r == '\n' {
+			linesCount++
+			currentLineWidth = 0
+			continue
+		}
+		if overFlowHandled {
+			runeWidth = runewidth.RuneWidth(r)
+			currentLineWidth += runeWidth
+			if currentLineWidth > termCols {
+				linesCount++
+				currentLineWidth = runeWidth
+			}
+		}
+	}
+	clearLines(linesCount)
 }
 
 // Bypass creates an io.Writer which allow to write permalent stuff to the terminal while liveterm is running.
