@@ -3,17 +3,20 @@
 
 `liveterm` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](https://github.com/gosuri/uilive).
 
-It changes its update model from push to pull and add features such as:
+Major differences are:
+* Switch from an async push update model to a sync pull update model
+* Better handling of cleaning the right amount of lines with terminal resizes
 * Helpers to get up to date terminal size to help user formats its data
     * Size is automatically updated if terminal is resized, simply call the helper at the beginning of your formating fx (see the [example](example/main.go))
 * Support for incomplete lines
     * User can push raw bytes even if not ended by `\n`
     * Cursor will stay at the end of the line (instead of the beginning of a new line)
     * But the line will be erased properly anyway
-* Support for runes (Unicode)
+* Support for runes (Unicode / UTF-8)
   * A rune can has length (byte representation) different from its column (printing) representation
   * For example a rune with a 3 bytes representation can only use 2 columns on the terminal
-  * Computing the actual lines printed to the terminal (especially the original lines overflow and create new ones) in order to erase them after can not rely on bytes len with unicode
+  * Computing the actual lines printed to the terminal (especially when the original lines overflow and create new ones) in order to erase them after can not rely on bytes len with unicode
+  * So lines lenght are based on unicode rune width instead of byte len in `uilive`
 
 ## Update model
 
