@@ -67,7 +67,10 @@ func main() {
 	// liveterm.SetMultiLinesUpdateFx(pc.GetCenteredCounter)
 
 	// Start live printing
-	liveterm.Start()
+	if err := liveterm.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to start liveterm: %s\n", err)
+		os.Exit(1)
+	}
 
 	// Let's write something to stdout while liveterm is running
 	time.Sleep(2 * time.Second)
