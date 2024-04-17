@@ -85,7 +85,7 @@ func Start() (err error) {
 	mtx.Lock()
 	// Nullify multiples calls to start
 	if ticker != nil {
-		return
+		return errors.New("liveterm is already started")
 	}
 	// Try to open the terminal to gets its informations
 	if err = initTermInfos(); err != nil {
