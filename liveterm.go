@@ -271,12 +271,15 @@ func delayedBypassWritter() {
 	defer close(delayedStopSignal)
 loop:
 	for {
+		mtx.Lock()
 		waitTime := time.NewTimer(time.Until(waitUntil))
+		mtx.Unlock()
 		select {
 		case <-waitTime.C:
 			mtx.Lock()
 			// In case wait duration has been reset during our wait
 			if waitUntil.After(time.Now()) {
+				mtx.Unlock()
 				continue loop
 			}
 			// Wait time is over, let's by pass
