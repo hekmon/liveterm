@@ -2,6 +2,7 @@ package liveterm
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -117,18 +118,28 @@ func worker() {
 			mtx.Unlock()
 		case clear = <-tdone:
 			mtx.Lock()
+			// Avoid future ticks
 			ticker.Stop()
 			ticker = nil
+			// Handle a potential delayed bypass writer
+			if waitCtxCancel != nil {
+				waitCtxCancel()
+				<-delayedStopSignal
+			}
+			// Either clear or update one last time
 			if clear {
 				erase()
 			} else {
-				// update ui one last time with latest possible data
 				update()
 			}
+			// Cleanup
 			out = nil
 			getterLines = nil
 			getterLine = nil
 			getterRaw = nil
+			waitCtx = nil
+			waitCtxCancel = nil
+			delayedStopSignal = nil
 			_ = clearTermInfos()
 			buf.Reset()
 			lastBuf.Reset()
@@ -206,6 +217,17 @@ func erase() {
 	clearLines(linesCount)
 }
 
+/*
+   Bypass related
+*/
+
+var (
+	waitBuf           bytes.Buffer
+	waitCtx           context.Context
+	waitCtxCancel     context.CancelFunc
+	delayedStopSignal chan struct{}
+)
+
 // Bypass creates an io.Writer which allow to write permalent stuff to the terminal while liveterm is running.
 // Do not forget to include a final '\n' when writting to it.
 func Bypass() io.Writer {
@@ -222,6 +244,18 @@ func (bypass) Write(p []byte) (n int, err error) {
 		err = errors.New("liveterm is not started, can not write to terminal")
 		return
 	}
+	// check if we are within a wait period
+	if overFlowHandled && waitUntil.After(time.Now()) {
+		// write it to a temporary buffer
+		n, err = waitBuf.Write(p)
+		// Start the delayer bypass writer if not already started
+		if waitCtx == nil {
+			waitCtx, waitCtxCancel = context.WithCancel(context.Background())
+			delayedStopSignal = make(chan struct{})
+			go delayedBypassWritter()
+		}
+		return
+	}
 	// erase current dynamic data
 	erase()
 	// write permanent data
@@ -231,4 +265,42 @@ func (bypass) Write(p []byte) (n int, err error) {
 	// rewrite the last known dynamic data after it
 	_, err = out.Write(lastBuf.Bytes())
 	return
+}
+
+func delayedBypassWritter() {
+	defer close(delayedStopSignal)
+loop:
+	for {
+		waitTime := time.NewTimer(time.Until(waitUntil))
+		select {
+		case <-waitTime.C:
+			mtx.Lock()
+			// In case wait duration has been reset during our wait
+			if waitUntil.After(time.Now()) {
+				continue loop
+			}
+			// Wait time is over, let's by pass
+			erase()
+			_, _ = out.Write(waitBuf.Bytes())
+			_, _ = out.Write(lastBuf.Bytes())
+			waitBuf.Reset()
+			// Before exiting, mark ourself as not started
+			waitCtx = nil
+			waitCtxCancel = nil
+			// Our work is done
+			mtx.Unlock()
+			return
+		case <-waitCtx.Done():
+			// liveterm is being stopped, let's flush the buffer
+			// do not try to lock the mutex as it is being locked by the main worker who canceled our context
+			erase()
+			_, _ = out.Write(waitBuf.Bytes())
+			_, _ = out.Write(lastBuf.Bytes())
+			waitBuf.Reset()
+			// Mark ourself as not started before exiting
+			waitCtx = nil
+			waitCtxCancel = nil
+			return
+		}
+	}
 }
