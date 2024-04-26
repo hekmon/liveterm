@@ -1,4 +1,4 @@
-module github.com/hekmon/liveterm
+module github.com/hekmon/liveterm/v2
 
 go 1.18
 

@@ -76,5 +76,5 @@ liveterm.Stop(false)
 ## Installation
 
 ```sh
-$ go get -v github.com/hekmon/liveterm
+$ go get -v github.com/hekmon/liveterm/v2
 ```

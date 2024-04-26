@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hekmon/liveterm"
+	"github.com/hekmon/liveterm/v2"
 )
 
 type postalCounter struct {
