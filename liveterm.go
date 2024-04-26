@@ -24,6 +24,7 @@ var (
 )
 
 var (
+	// state
 	termOutput   *termenv.Output
 	terminalFile termenv.File
 	termRestore  func() error
@@ -35,6 +36,8 @@ var (
 	getterRaw    func() []byte
 	mtx          sync.Mutex
 	tdone        chan bool
+	// missing cursor movement from termenv
+	moveCursorBeginningOfTheLine = fmt.Sprintf(termenv.CSI+termenv.CursorHorizontalSeq, 0)
 )
 
 // ForceUpdate forces an update of the terminal with dynamic data between ticks.
@@ -226,6 +229,7 @@ func erase() {
 			}
 		}
 	}
+	_, _ = termOutput.WriteString(moveCursorBeginningOfTheLine)
 	termOutput.ClearLine()
 	termOutput.ClearLines(linesCount)
 }
