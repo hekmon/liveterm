@@ -47,6 +47,13 @@ func ForceUpdate() {
 	mtx.Unlock()
 }
 
+// GetTermProfile returns the termenv profile used by liveterm.
+// It can be used to create styles and colors that will be compatible with the terminal within your updater function.
+// Only call this function after Start() has been called.
+func GetTermProfil() termenv.Profile {
+	return termOutput.Profile
+}
+
 // GetTermSize returns the last known terminal size.
 // It is either updated automatically on terminal resize on Unix like systems
 // or updated at each refresh/update interval for windows.
