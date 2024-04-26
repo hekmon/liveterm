@@ -47,11 +47,18 @@ func ForceUpdate() {
 	mtx.Unlock()
 }
 
+// GetTermProfil has a typo in its name, it is kept for backward compatibility.
+// Deprecated: please use GetTermProfile() instead.
+func GetTermProfil() termenv.Profile {
+	return GetTermProfile()
+}
+
 // GetTermProfile returns the termenv profile used by liveterm.
 // It can be used to create styles and colors that will be compatible with the terminal within your updater function.
 // If Start() has not been called yet, it will return the termenv profile of the current Output config value.
-func GetTermProfil() termenv.Profile {
+func GetTermProfile() termenv.Profile {
 	if termOutput != nil {
+		// liveterm has been started, we can return the current profile
 		return termOutput.Profile
 	}
 	// Start has not been called yet, let's do our best to get the right profil:
