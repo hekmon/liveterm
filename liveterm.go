@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/muesli/termenv"
 )
 
 const (
@@ -24,7 +25,8 @@ var (
 )
 
 var (
-	out          io.Writer
+	termOutput   *termenv.Output
+	termRestore  func() error
 	ticker       *time.Ticker
 	waitUntil    time.Time
 	buf, lastBuf bytes.Buffer
@@ -88,12 +90,19 @@ func Start() (err error) {
 	if ticker != nil {
 		return errors.New("liveterm is already started")
 	}
-	// Try to open the terminal to gets its informations
+	// Init term
+	termOutput = termenv.NewOutput(Output)
+	if termOutput.TTY() == nil {
+		termOutput = nil
+		return errors.New("output is not a terminal")
+	}
+	if termRestore, err = termenv.EnableVirtualTerminalProcessing(termOutput); err != nil {
+		return fmt.Errorf("failed to enable virtual terminal processing: %w", err)
+	}
 	if err = initTermInfos(); err != nil {
 		return fmt.Errorf("failed to init terminal: %w", err)
 	}
 	// Start the updater
-	out = Output
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
 	go worker()
@@ -103,9 +112,10 @@ func Start() (err error) {
 // Stop stops the worker that updates the terminal.
 // Clear will erase dynamic data from the terminal before stopping, otherwise it will update term one last time before stopping.
 // Choosen output (stdout or stderr) can be used again directly after this call.
-func Stop(clear bool) {
+func Stop(clear bool) (err error) {
 	tdone <- clear
 	<-tdone
+	return termRestore()
 }
 
 func worker() {
@@ -133,7 +143,7 @@ func worker() {
 				update()
 			}
 			// Cleanup
-			out = nil
+			termOutput = nil
 			getterLines = nil
 			getterLine = nil
 			getterRaw = nil
@@ -152,7 +162,7 @@ func worker() {
 
 // update is unsafe ! It must be called within a mutex lock by one of its callers
 func update() {
-	if (getterLines == nil && getterLine == nil && getterRaw == nil) || out == nil {
+	if (getterLines == nil && getterLine == nil && getterRaw == nil) || termOutput == nil {
 		return
 	}
 	// Update terminal size for erase
@@ -188,7 +198,7 @@ func update() {
 	// Cleanup terminal based on previous data and current terminal size
 	erase()
 	// Update terminal with it
-	_, _ = out.Write(buf.Bytes())
+	_, _ = termOutput.Write(buf.Bytes())
 	// Swap buffers to minimze memory allocation
 	lastBuf, buf = buf, lastBuf
 }
@@ -240,7 +250,7 @@ func (bypass) Write(p []byte) (n int, err error) {
 	defer mtx.Unlock()
 	mtx.Lock()
 	// if liveterm is not started, out is nil
-	if out == nil {
+	if termOutput == nil {
 		err = errors.New("liveterm is not started, can not write to terminal")
 		return
 	}
@@ -259,11 +269,11 @@ func (bypass) Write(p []byte) (n int, err error) {
 	// erase current dynamic data
 	erase()
 	// write permanent data
-	if n, err = out.Write(p); err != nil {
+	if n, err = termOutput.Write(p); err != nil {
 		return
 	}
 	// rewrite the last known dynamic data after it
-	_, err = out.Write(lastBuf.Bytes())
+	_, err = termOutput.Write(lastBuf.Bytes())
 	return
 }
 
@@ -284,8 +294,8 @@ loop:
 			}
 			// Wait time is over, let's by pass
 			erase()
-			_, _ = out.Write(waitBuf.Bytes())
-			_, _ = out.Write(lastBuf.Bytes())
+			_, _ = termOutput.Write(waitBuf.Bytes())
+			_, _ = termOutput.Write(lastBuf.Bytes())
 			waitBuf.Reset()
 			// Before exiting, mark ourself as not started
 			waitCtx = nil
@@ -297,8 +307,8 @@ loop:
 			// liveterm is being stopped, let's flush the buffer
 			// do not try to lock the mutex as it is being locked by the main worker who canceled our context
 			erase()
-			_, _ = out.Write(waitBuf.Bytes())
-			_, _ = out.Write(lastBuf.Bytes())
+			_, _ = termOutput.Write(waitBuf.Bytes())
+			_, _ = termOutput.Write(lastBuf.Bytes())
 			waitBuf.Reset()
 			// Mark ourself as not started before exiting
 			waitCtx = nil
