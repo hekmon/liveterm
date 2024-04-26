@@ -21,15 +21,11 @@ func (pc *postalCounter) GetCounter() string {
 func (pc *postalCounter) GetCenteredRedCounter() (output []string) {
 	// Let's center the counter within the terminal window
 	// It will adjust even if the terminal is resized
-	counterStr := strconv.Itoa(pc.counter)
 	cols, rows := liveterm.GetTermSize()
 	output = make([]string, rows-1)
-	for lineIndex := 0; lineIndex < len(output); lineIndex++ {
-		if lineIndex == len(output)/2 {
-			output[lineIndex] = fmt.Sprintf("%*s%s", (cols-len(counterStr))/2, "",
-				liveterm.GetTermProfile().String(counterStr).Foreground(termenv.ANSIRed).Bold().String())
-		}
-	}
+	counterStr := strconv.Itoa(pc.counter)
+	output[len(output)/2] = fmt.Sprintf("%*s%s", (cols-len(counterStr))/2, "",
+		liveterm.GetTermProfile().String(counterStr).Foreground(termenv.ANSIRed).Bold().String())
 	return
 }
 
@@ -70,8 +66,8 @@ func main() {
 	// Set the function that will return the data to be displayed
 	// This can be done or changed even after Start() has been called
 	// Try them out by uncommenting the one you want to use (and only one at a time)
-	liveterm.SetSingleLineUpdateFx(pc.GetCounter)
-	// liveterm.SetMultiLinesUpdateFx(pc.GetCenteredRedCounter)
+	// liveterm.SetSingleLineUpdateFx(pc.GetCounter)
+	liveterm.SetMultiLinesUpdateFx(pc.GetCenteredRedCounter)
 	// liveterm.SetRawUpdateFx(pc.GetRawCounter)
 
 	// Start live printing
