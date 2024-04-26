@@ -49,9 +49,14 @@ func ForceUpdate() {
 
 // GetTermProfile returns the termenv profile used by liveterm.
 // It can be used to create styles and colors that will be compatible with the terminal within your updater function.
-// Only call this function after Start() has been called.
+// If Start() has not been called yet, it will return the termenv profile of the current Output config value.
 func GetTermProfil() termenv.Profile {
-	return termOutput.Profile
+	if termOutput != nil {
+		return termOutput.Profile
+	}
+	// Start has not been called yet, let's do our best to get the right profil:
+	// we will open the current config value for output, hopping it will still be the same when Start() is called
+	return termenv.NewOutput(Output).Profile
 }
 
 // GetTermSize returns the last known terminal size.
