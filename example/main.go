@@ -80,5 +80,7 @@ func main() {
 	<-pcDone
 
 	// Release stdout
-	liveterm.Stop(false)
+	if err := liveterm.Stop(false); err != nil {
+		panic(err)
+	}
 }
