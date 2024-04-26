@@ -18,6 +18,8 @@ Major differences are:
   * Computing the actual lines printed to the terminal (especially when the original lines overflow and create new ones) in order to erase them after can not rely on bytes len with unicode
   * So lines lenght are based on unicode rune width instead of byte len in `uilive`
 
+Be sure to check [liveprogress](https://github.com/hekmon/liveprogress) as well !
+
 ## Update model
 
 ### uilive
