@@ -226,10 +226,6 @@ func erase() {
 			}
 		}
 	}
-	clearLines(linesCount)
-}
-
-func clearLines(linesCount int) {
 	termOutput.ClearLine()
 	termOutput.ClearLines(linesCount)
 }
