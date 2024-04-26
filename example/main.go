@@ -31,6 +31,10 @@ func (pc *postalCounter) GetCenteredCounter() (output []string) {
 	return
 }
 
+func (pc *postalCounter) GetRawCounter() []byte {
+	return []byte(strconv.Itoa(pc.counter))
+}
+
 func (pc *postalCounter) StartCounting(duration time.Duration) {
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
@@ -65,6 +69,7 @@ func main() {
 	// This can be done or changed even after Start() has been called
 	liveterm.SetSingleLineUpdateFx(pc.GetCounter)
 	// liveterm.SetMultiLinesUpdateFx(pc.GetCenteredCounter)
+	// liveterm.SetRawUpdateFx(pc.GetRawCounter)
 
 	// Start live printing
 	if err := liveterm.Start(); err != nil {
