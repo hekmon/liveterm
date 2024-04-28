@@ -17,6 +17,11 @@ Major differences are:
   * For example a rune with a 3 bytes representation can only use 2 columns on the terminal
   * Computing the actual lines printed to the terminal (especially when the original lines overflow and create new ones) in order to erase them after can not rely on bytes len with unicode
   * So lines lenght are based on unicode rune width instead of byte len in `uilive`
+* (invisible) Support for ANSI terminal sequences (for example, colors)
+  * Runes composing them should not be taken into account when computing runes width for a line
+  * As the terminal will not print them...
+  * ...even if they should normaly have a rune width when printed outside a terminal sequence !
+  * Counting them would produce an wrong line width/count and disturb the computed lines number to erase
 
 Be sure to check [liveprogress](https://github.com/hekmon/liveprogress) as well !
 

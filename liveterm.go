@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/muesli/ansi"
 	"github.com/muesli/termenv"
 )
 
@@ -229,22 +230,35 @@ func update() {
 
 // erase is unsafe ! It must be called within a mutex lock by one of its callers
 func erase() {
-	// Given the previous data we printed and the current terminal size
-	// we can compute the number of lines to erase.
-	linesCount := 0
-	var currentLineWidth, runeWidth int
+	// Given the previous data we printed and the current terminal size,
+	// we need to compute the number of lines occupied by it and so, to erase.
+	var (
+		linesCount, currentLineWidth, runeWidth int
+		withinTermSeq                           bool
+	)
 	for _, r := range lastBuf.String() {
-		if r == '\n' {
-			linesCount++
-			currentLineWidth = 0
+		// Ignore rune width if within a terminal sequence as terminal will not print it even if it normally have a rune width
+		if withinTermSeq {
+			if ansi.IsTerminator(r) {
+				withinTermSeq = false
+			}
 			continue
 		}
-		if overFlowHandled {
-			runeWidth = runewidth.RuneWidth(r)
-			currentLineWidth += runeWidth
-			if currentLineWidth > termCols {
-				linesCount++
-				currentLineWidth = runeWidth
+		// Not within an terminal sequence, evaluate the rune
+		switch r {
+		case ansi.Marker:
+			withinTermSeq = true
+		case '\n':
+			linesCount++
+			currentLineWidth = 0
+		default:
+			if overFlowHandled {
+				runeWidth = runewidth.RuneWidth(r)
+				currentLineWidth += runeWidth
+				if currentLineWidth > termCols {
+					linesCount++
+					currentLineWidth = runeWidth
+				}
 			}
 		}
 	}
