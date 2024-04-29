@@ -30,7 +30,7 @@ Be sure to check [liveprogress](https://github.com/hekmon/liveprogress) as well 
 ### uilive
 
 `uilive` works with an async push based approach:
-* You write (aka "push") to an buffer within `uilive` writer
+* You write (aka "push") to a buffer within `uilive` writer
 * Writing to this buffer triggers a mutex lock/unlock
 * When ticks kick in, `uilive` read its internal buffer and update the terminal with it
 
@@ -40,7 +40,7 @@ This can cause performance issue when your data change very frequently:
 * Between each ui update, the internal buffer is modified 100,000 times, 99,999 for nothing
 * This is wasted ressources and can cause slowdown because of the mutex constant locking/unlocking
 
-You could throttle you data update with your own ticker but you will end up with 2 tickers on both side, not in sync. Why not use only one ?
+You could throttle your data update with your own ticker but you will end up with 2 tickers on both side, not in sync. Why not use only one ?
 
 ### liveterm
 
@@ -70,7 +70,8 @@ liveterm.Start()
 // [ ... ]
 
 // Let's write something to stdout while liveterm is running
-fmt.Fprintf(liveterm.Bypass(), "This is a message that will be displayed on stdout while the counter is running\n")
+fmt.Fprintf(liveterm.Bypass(),
+	"This is a message that will be displayed on stdout while the counter is running\n")
 
 // [ ... ]
 
