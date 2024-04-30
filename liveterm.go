@@ -22,12 +22,14 @@ var (
 	// Config (must be changed before calling Start())
 	RefreshInterval           = 100 * time.Millisecond // RefreshInterval defines the time between each output refresh
 	Output          io.Writer = os.Stdout              // Terminal Output
+	HideCursor                = false                  // HideCursor defines if the cursor should be hidden or not during rendering (between Start() and Stop())
 )
 
 var (
 	// state
 	termOutput   *termenv.Output
 	terminalFile termenv.File
+	cursorHidden bool
 	termRestore  func() error
 	ticker       *time.Ticker
 	waitUntil    time.Time
@@ -124,6 +126,12 @@ func Start() (err error) {
 		return fmt.Errorf("failed to enable virtual terminal processing: %w", err)
 	}
 	initTermSize()
+	if HideCursor {
+		termOutput.HideCursor()
+		cursorHidden = true
+	} else {
+		cursorHidden = false
+	}
 	// Start the updater
 	ticker = time.NewTicker(RefreshInterval)
 	tdone = make(chan bool)
@@ -135,8 +143,10 @@ func Start() (err error) {
 // Clear will erase dynamic data from the terminal before stopping, otherwise it will update term one last time before stopping.
 // Choosen output (stdout or stderr) can be used again directly after this call.
 func Stop(clear bool) (err error) {
+	// Stop the updater
 	tdone <- clear
 	<-tdone
+	// Restore terminal state (termenv Windows support)
 	err = termRestore()
 	termRestore = nil
 	return
@@ -165,6 +175,10 @@ func worker() {
 				erase()
 			} else {
 				update()
+			}
+			// Restore cursor if necessary
+			if cursorHidden {
+				termOutput.ShowCursor()
 			}
 			// Cleanup
 			termOutput = nil
