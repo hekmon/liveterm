@@ -1,5 +1,5 @@
 # liveterm
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/liveterm)](https://pkg.go.dev/github.com/hekmon/liveterm)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/hekmon/liveterm/v2)](https://pkg.go.dev/github.com/hekmon/liveterm/v2)
 
 `liveterm` is a go library for updating terminal output in realtime. It is a fork of the really usefull [uilive](https://github.com/gosuri/uilive).
 
