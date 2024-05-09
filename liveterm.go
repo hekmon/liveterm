@@ -69,6 +69,32 @@ func GetTermProfile() termenv.Profile {
 	return termenv.NewOutput(Output).Profile
 }
 
+// HasDarkBackground returns whether terminal uses a dark-ish background.
+// If Start() has not been called yet, it will return the current value of the Output config value.
+func HasDarkBackground() bool {
+	if termOutput != nil {
+		return termOutput.HasDarkBackground()
+	}
+	return termenv.NewOutput(Output).HasDarkBackground()
+}
+
+// Hyperlink creates a hyperlink.
+func Hyperlink(link, name string) string {
+	if termOutput != nil {
+		return termOutput.Hyperlink(link, name)
+	}
+	return termenv.NewOutput(Output).Hyperlink(link, name)
+}
+
+// Notify triggers a notification.
+func Notify(title, body string) {
+	if termOutput != nil {
+		// Do not write directly on terminal as lines will be erased sonner than later, write definitly using Bypass()
+		fmt.Fprintf(Bypass(), "%s777;notify;%s;%s%s", termenv.OSC, title, body, termenv.ST)
+	}
+	termenv.NewOutput(Output).Notify(title, body)
+}
+
 // GetTermSize returns the last known terminal size.
 // It is either updated automatically on terminal resize on Unix like systems
 // or updated at each refresh/update interval for windows.
